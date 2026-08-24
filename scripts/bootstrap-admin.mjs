@@ -1,0 +1,10 @@
+import { MongoClient } from "mongodb";
+import { hashPassword } from "better-auth/crypto";
+const { MONGODB_URI, ADMIN_EMAIL, ADMIN_PASSWORD, ADMIN_NAME = "Administrateur" } = process.env;
+if (!MONGODB_URI || !ADMIN_EMAIL || !ADMIN_PASSWORD) throw new Error("MONGODB_URI, ADMIN_EMAIL et ADMIN_PASSWORD sont requis.");
+const client = new MongoClient(MONGODB_URI); await client.connect(); const db = client.db();
+if (await db.collection("user").findOne({ email: ADMIN_EMAIL.toLowerCase() })) throw new Error("Cet administrateur existe déjà.");
+const userId = crypto.randomUUID(); const accountId = crypto.randomUUID(); const hash = await hashPassword(ADMIN_PASSWORD);
+await db.collection("user").insertOne({ id: userId, name: ADMIN_NAME, email: ADMIN_EMAIL.toLowerCase(), emailVerified: true, role: "admin", createdAt: new Date(), updatedAt: new Date() });
+await db.collection("account").insertOne({ id: accountId, accountId: userId, providerId: "credential", userId, password: hash, createdAt: new Date(), updatedAt: new Date() });
+await client.close(); console.log(`Administrateur créé : ${ADMIN_EMAIL}`);

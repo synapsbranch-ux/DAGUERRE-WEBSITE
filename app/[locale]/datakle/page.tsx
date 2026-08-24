@@ -1,0 +1,142 @@
+import type { Metadata } from "next";
+import Link from "next/link";
+
+import {
+  EditorialBody,
+  EditorialEmpty,
+  EditorialHeader,
+  EditorialItems,
+  EditorialSections,
+} from "@/components/sections/EditorialPages";
+import { JsonLd } from "@/components/seo/JsonLd";
+import { Button } from "@/components/ui/button";
+import { Container } from "@/components/ui/Container";
+import { getPage, getServices, getSocialLinks } from "@/lib/content";
+import { getDictionary, getDictionaryFor, getLocale } from "@/lib/dictionaries";
+import { isLocale } from "@/lib/i18n";
+import { href } from "@/lib/routes";
+import { organizationSchema } from "@/lib/schema";
+import { createMetadata } from "@/lib/seo";
+
+export async function generateMetadata({
+  params,
+}: PageProps<"/[locale]/datakle">): Promise<Metadata> {
+  const { locale } = await params;
+  if (!isLocale(locale)) return {};
+
+  const [{ pages }, page] = await Promise.all([getDictionaryFor(locale), getPage("datakle", locale)]);
+
+  return createMetadata({
+    locale,
+    routeKey: "datakle",
+    title: page?.title || pages.datakle.metaTitle,
+    description: page?.subtitle || pages.datakle.metaDescription,
+    image: page?.heroImage,
+    keywords: ["Datakle", "démocratisation de la donnée", "conseil data", "formation données"],
+  });
+}
+
+/** Page Datakle : mission, vision, valeurs, sections illustrées et services publiés. */
+export default async function DataklePage() {
+  const [locale, dict, page, services, socialLinks] = await Promise.all([
+    getLocale(),
+    getDictionary(),
+    getPage("datakle"),
+    getServices(),
+    getSocialLinks(),
+  ]);
+  const labels = dict.pages.datakle;
+
+  if (!page) {
+    return (
+      <Container>
+        <EditorialEmpty title={labels.title} message={dict.pages.editorial.empty} />
+      </Container>
+    );
+  }
+
+  const cta = page.ctaHref
+    ? { label: page.ctaLabel || labels.collaborateCta, url: page.ctaHref }
+    : { label: labels.seeServices, url: href("services", locale) };
+
+  return (
+    <>
+      <JsonLd data={organizationSchema(socialLinks.map((link) => link.url))} />
+      <Container>
+        <EditorialHeader
+          eyebrow={labels.eyebrow}
+          title={page.title}
+          subtitle={page.subtitle}
+          image={page.heroImage}
+        />
+
+        <EditorialBody
+          body={page.body}
+          className="prose max-w-[70ch] border-t border-border py-14 text-[15px] leading-7 text-foreground"
+        />
+
+        {page.mission || page.vision ? (
+          <section className="grid gap-8 border-t border-border py-14 lg:grid-cols-2 lg:gap-16">
+            {page.mission ? (
+              <div>
+                <h2 className="text-3xl">{labels.sections.mission}</h2>
+                <p className="mt-4 max-w-[58ch] leading-7 text-muted-foreground">{page.mission}</p>
+              </div>
+            ) : null}
+            {page.vision ? (
+              <div>
+                <h2 className="text-3xl">{labels.sections.vision}</h2>
+                <p className="mt-4 max-w-[58ch] leading-7 text-muted-foreground">{page.vision}</p>
+              </div>
+            ) : null}
+          </section>
+        ) : null}
+
+        <EditorialItems title={labels.sections.valeurs} items={page.items} />
+        <EditorialSections sections={page.sections} />
+
+        {services.length > 0 ? (
+          <section className="border-t border-border py-14">
+            <div className="flex flex-wrap items-end gap-6">
+              <h2 className="flex-1 text-3xl">{labels.sections.services}</h2>
+              <Button asChild variant="ghost">
+                <Link href={href("services", locale)}>{labels.seeServices} →</Link>
+              </Button>
+            </div>
+            <ul className="mt-8 grid gap-4 sm:grid-cols-2 lg:grid-cols-3">
+              {services.slice(0, 6).map((service) => (
+                <li key={service.slug} className="rounded-2xl border border-border bg-white/45 p-5">
+                  <h3 className="text-lg">
+                    <Link
+                      href={href("services", locale, service.slug)}
+                      className="transition-colors hover:text-primary"
+                    >
+                      {service.title}
+                    </Link>
+                  </h3>
+                  {service.summary ? (
+                    <p className="mt-2 text-sm leading-6 text-muted-foreground">{service.summary}</p>
+                  ) : null}
+                </li>
+              ))}
+            </ul>
+          </section>
+        ) : null}
+
+        <section className="border-t border-border py-14">
+          <h2 className="text-3xl">{labels.collaborate}</h2>
+          <p className="mt-3 max-w-[58ch] text-muted-foreground">{labels.collaborateBody}</p>
+          <Button asChild size="cta" className="mt-6">
+            {cta.url.startsWith("http") ? (
+              <a href={cta.url} target="_blank" rel="noreferrer noopener">
+                {cta.label}
+              </a>
+            ) : (
+              <Link href={cta.url}>{cta.label}</Link>
+            )}
+          </Button>
+        </section>
+      </Container>
+    </>
+  );
+}
