@@ -1,5 +1,6 @@
 "use client";
 
+import Image from "next/image";
 import * as React from "react";
 import gsap from "gsap";
 import { ScrollTrigger } from "gsap/ScrollTrigger";
@@ -11,11 +12,27 @@ if (typeof window !== "undefined") {
   gsap.registerPlugin(ScrollTrigger);
 }
 
+/**
+ * Ruixen UI — Scroll Portrait Wall.
+ *
+ * Adaptations Daguerre :
+ * - les portraits partent visibles et c'est GSAP qui les réduit au montage :
+ *   sans JavaScript, la version d'origine laissait un mur vide ;
+ * - `next/image` remplace `<img>` ;
+ * - le jeu de démonstration distant est retiré — les visuels sont fournis ;
+ * - le titre collant accepte n'importe quel nœud et la légende reste
+ *   traduisible.
+ *
+ * Le balayage au défilement (échelle 0 → 1 → 0 par portrait) est celui du
+ * composant d'origine, et reste coupé sous `prefers-reduced-motion`.
+ */
 export interface Speaker {
   name: string;
   role: string;
   /** Image URL. Square / portrait crops look best. */
   src: string;
+  /** Sert l'image telle quelle (source distante non déclarée à Next). */
+  unoptimized?: boolean;
 }
 
 export interface ScrollPortraitWallProps {
@@ -25,8 +42,8 @@ export interface ScrollPortraitWallProps {
   date?: React.ReactNode;
   /** Scroll hint that fades out as the wall comes into view. */
   hint?: React.ReactNode;
-  /** People to scatter across the wall. Defaults to a built-in demo set. */
-  speakers?: Speaker[];
+  /** Portraits dispersés sur le mur. */
+  speakers: Speaker[];
   /** Columns on large screens (auto-reduced to 3 on `sm` and 2 on mobile). */
   columns?: number;
   /** Show the name / role caption under each portrait. Default `true`. */
@@ -83,28 +100,11 @@ function useResponsiveColumns(desired: number): number {
   return cols;
 }
 
-const DEMO_SPEAKERS: Speaker[] = [
-  { name: "Alex Johnson", role: "CEO & Founder" },
-  { name: "Sarah Chen", role: "CTO" },
-  { name: "Marcus Rivera", role: "Lead Designer" },
-  { name: "Emily Watson", role: "Product Manager" },
-  { name: "David Kim", role: "Senior Developer" },
-  { name: "Lisa Thompson", role: "Marketing Director" },
-  { name: "James Wilson", role: "UX Researcher" },
-  { name: "Rachel Green", role: "Data Scientist" },
-  { name: "Michael Brown", role: "DevOps Engineer" },
-  { name: "Anna Davis", role: "Content Strategist" },
-].map((s, i) => ({
-  ...s,
-  // 5 avatars on the CDN, cycled across the speakers.
-  src: `https://pub-940ccf6255b54fa799a9b01050e6c227.r2.dev/avatar-images/avatar-${String((i % 5) + 1).padStart(2, "0")}.jpg`,
-}));
-
 export function ScrollPortraitWall({
   title = "Speakers",
   date = "Oct 22, 2025",
   hint = "scroll down to see effect",
-  speakers = DEMO_SPEAKERS,
+  speakers,
   columns = 4,
   showCaptions = true,
   className,
@@ -128,6 +128,10 @@ export function ScrollPortraitWall({
         gsap.set(items, { scale: 1 });
         return;
       }
+
+      // Les portraits sont rendus à taille réelle : c'est ici qu'ils sont
+      // rétractés, une fois GSAP disponible.
+      gsap.set(items, { scale: 0 });
 
       // Hint fades away over the first stretch of scrolling.
       gsap.to(hintRef.current, {
@@ -208,16 +212,16 @@ export function ScrollPortraitWall({
                 <div key={ci} className="aspect-square flex-1">
                   <div
                     className="spw-item relative h-full w-full"
-                    style={{ transformOrigin: origin, transform: "scale(0)" }}
+                    style={{ transformOrigin: origin }}
                   >
-                    {/* eslint-disable-next-line @next/next/no-img-element */}
-                    <img
+                    <Image
                       src={s.src}
                       alt={s.name}
-                      loading="lazy"
-                      decoding="async"
+                      fill
+                      sizes={`(max-width: 640px) 50vw, ${Math.round(100 / cols)}vw`}
                       draggable={false}
-                      className="h-full w-full object-cover grayscale contrast-[1.15] filter transition-transform duration-500 ease-in-out hover:scale-95"
+                      unoptimized={s.unoptimized}
+                      className="object-cover grayscale contrast-[1.15] filter transition-transform duration-500 ease-in-out hover:scale-95"
                     />
                     {showCaptions && (
                       <div className="absolute -bottom-2 left-0 flex w-full translate-y-full justify-between gap-2 text-[11px] uppercase leading-tight text-muted-foreground sm:text-sm">

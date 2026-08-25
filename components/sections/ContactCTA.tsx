@@ -1,7 +1,6 @@
 import { ArrowUpRight } from "lucide-react";
-import Link from "next/link";
 
-import { Button } from "@/components/ui/button";
+import { LiquidCtaLink } from "@/components/liquefy/LiquidCtaLink";
 import { Container } from "@/components/ui/Container";
 import type { Dictionary } from "@/lib/dictionaries";
 import type { Locale } from "@/lib/i18n";
@@ -14,6 +13,12 @@ type ContactCTAProps = {
   fullBleed?: boolean;
 };
 
+/**
+ * Appel à l'action de fin de page.
+ *
+ * Le bouton est celui de Liquefy — le même verre liquide que dans l'en-tête —
+ * rendu en lien pour conserver le préchargement Next (voir `LiquidCtaLink`).
+ */
 export function ContactCTA({ locale, dict, fullBleed = false }: ContactCTAProps) {
   const content = (
     <div className="grid items-end gap-8 lg:grid-cols-[1fr_auto]">
@@ -33,15 +38,14 @@ export function ContactCTA({ locale, dict, fullBleed = false }: ContactCTAProps)
           {dict.pages.contact.description}
         </p>
       </div>
-      <Button
-        asChild
-        size="cta"
-        className="border-[var(--navy-950)] bg-[var(--navy-950)] text-white hover:border-[var(--navy-800)] hover:bg-[var(--navy-800)]"
+      <LiquidCtaLink
+        href={href("contact", locale)}
+        size="lg"
+        tint={fullBleed ? "#07131f" : undefined}
+        iconAfter={<ArrowUpRight aria-hidden="true" className="size-4" />}
       >
-        <Link href={href("contact", locale)}>
-          {dict.common.contactCta} <ArrowUpRight aria-hidden="true" />
-        </Link>
-      </Button>
+        {dict.common.contactCta}
+      </LiquidCtaLink>
     </div>
   );
 

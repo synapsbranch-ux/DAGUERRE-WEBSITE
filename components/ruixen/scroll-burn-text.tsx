@@ -3,6 +3,16 @@
 import * as React from "react";
 import { cn } from "@/lib/utils";
 
+/**
+ * Ruixen UI — Scroll Burn Text.
+ *
+ * Adaptations Daguerre : la surface est pilotée par `surfaceClassName` (la
+ * bande est encre, pas papier), la couleur du texte est héritée, et la frange
+ * rouge/cyan de la démonstration reprend le cuivre et l'encre de la charte.
+ *
+ * La combustion au défilement et le repli sous `prefers-reduced-motion` sont
+ * ceux du composant d'origine.
+ */
 export interface ScrollBurnTextProps {
   /**
    * The blocks, read in order. Each one comes up out of the dark, passes the
@@ -16,6 +26,8 @@ export interface ScrollBurnTextProps {
   /** Scrollable ancestor to track instead of the page — pass this when pinning inside a bounded panel. */
   container?: React.RefObject<HTMLElement | null>;
   className?: string;
+  /** Surface de la bande, appliquée aussi au cadre épinglé. */
+  surfaceClassName?: string;
 }
 
 /**
@@ -78,6 +90,7 @@ export function ScrollBurnText({
   runway = "170vh",
   container,
   className,
+  surfaceClassName = "bg-background",
 }: ScrollBurnTextProps) {
   const prefersReducedMotion = useReducedMotion();
   const runwayRef = React.useRef<HTMLDivElement>(null);
@@ -240,11 +253,11 @@ export function ScrollBurnText({
   // reading distance, and stepping the size while the column scales smoothly
   // leaves it a third of the height it should be between two breakpoints.
   const column =
-    "relative w-[min(84vw,36rem)] text-center text-[clamp(1.25rem,6.5vw,2.75rem)] font-bold leading-[1.05] tracking-tight text-foreground";
+    "relative w-[min(84vw,36rem)] text-center font-heading text-[clamp(1.25rem,6.5vw,2.75rem)] font-bold leading-[1.05] tracking-tight";
 
   if (prefersReducedMotion) {
     return (
-      <div className={cn("w-full bg-background px-6 py-24", className)}>
+      <div className={cn("w-full px-6 py-24", surfaceClassName, className)}>
         <div className="mx-auto grid max-w-2xl gap-10">
           {sections.map((body, i) => (
             <p key={i} className={cn(column, "w-full text-left")}>
@@ -257,16 +270,16 @@ export function ScrollBurnText({
   }
 
   return (
-    <div className={cn("w-full bg-background", className)}>
+    <div className={cn("w-full", surfaceClassName, className)}>
       <div
         ref={runwayRef}
         style={{ height: `calc(${runway} * ${count})` }}
         className="w-full"
       >
-        <div className="sticky top-0 h-screen w-full overflow-hidden bg-background">
+        <div className={cn("sticky top-0 h-screen w-full overflow-hidden", surfaceClassName)}>
           <div
             ref={counterRef}
-            className="pointer-events-none absolute bottom-5 left-6 z-10 text-[0.65rem] font-medium uppercase tracking-[0.22em] tabular-nums text-muted-foreground"
+            className="pointer-events-none absolute bottom-5 left-6 z-10 text-[0.65rem] font-medium uppercase tracking-[0.22em] tabular-nums text-current/55"
           />
 
           {hint ? (
@@ -276,7 +289,7 @@ export function ScrollBurnText({
             >
               {/* The rule under it is the direction. The word alone reads as a
                   label on the frame rather than an instruction to the reader. */}
-              <span className="relative text-[0.65rem] font-medium uppercase tracking-[0.22em] text-muted-foreground after:absolute after:left-1/2 after:top-full after:mt-2 after:h-8 after:w-px after:bg-gradient-to-b after:from-muted-foreground/50 after:to-transparent after:content-['']">
+              <span className="relative text-[0.65rem] font-medium uppercase tracking-[0.22em] text-current/55 after:absolute after:left-1/2 after:top-full after:mt-2 after:h-8 after:w-px after:bg-gradient-to-b after:from-current/40 after:to-transparent after:content-['']">
                 {hint}
               </span>
             </div>
@@ -304,7 +317,7 @@ export function ScrollBurnText({
                     // of the copy: same fringe, a third of the DOM, and it
                     // widens off the same number that is eating the glyphs.
                     textShadow:
-                      "calc(var(--ab) * -1px) 0 rgb(255 45 85 / 0.85), calc(var(--ab) * 1px) 0 rgb(0 225 255 / 0.85)",
+                      "calc(var(--ab) * -1px) 0 rgb(196 124 75 / 0.85), calc(var(--ab) * 1px) 0 rgb(109 125 141 / 0.85)",
                   } as React.CSSProperties
                 }
               >
