@@ -18,6 +18,10 @@ import { motion } from "motion/react";
 
 interface WordmarkFooterProps {
   brandName?: string;
+  /** Fond de la bande. Reprend l'encre de la charte par défaut. */
+  background?: string;
+  /** Famille typographique du mot-symbole. */
+  fontFamily?: string;
 }
 
 /* ── Scoped CSS ── */
@@ -48,6 +52,8 @@ const VMASK =
 
 export function WordmarkFooter({
   brandName = "Ruixen UI",
+  background = "var(--wf-bg)",
+  fontFamily,
 }: WordmarkFooterProps) {
   const [inView, setInView] = useState(false);
   const sectionRef = useRef<HTMLElement>(null);
@@ -64,7 +70,9 @@ export function WordmarkFooter({
 
   /* ── Per-frame lerp loop — direct DOM writes ── */
 
-  const paint = useCallback(() => {
+  // Boucle nommée : elle se rappelle elle-même sans lire `paint` avant sa
+  // déclaration — le compilateur React refuse la référence croisée.
+  const paint = useCallback(function loop() {
     curX.current += (tgtX.current - curX.current) * 0.1;
     curY.current += (tgtY.current - curY.current) * 0.1;
 
@@ -78,7 +86,7 @@ export function WordmarkFooter({
     const dy = Math.abs(tgtY.current - curY.current);
 
     if (hovering.current || dx > 0.05 || dy > 0.05) {
-      raf.current = requestAnimationFrame(paint);
+      raf.current = requestAnimationFrame(loop);
     }
   }, []);
 
@@ -139,17 +147,19 @@ export function WordmarkFooter({
         position: "relative",
         width: "100%",
         overflow: "hidden",
-        background: "var(--wf-bg)",
+        background,
         height: "clamp(100px, 15.5vw, 215px)",
         fontFamily:
+          fontFamily ??
           '-apple-system, BlinkMacSystemFont, "Segoe UI", Roboto, "Helvetica Neue", Arial, sans-serif',
-        cursor: "pointer",
+        cursor: "default",
       }}
     >
       <style dangerouslySetInnerHTML={{ __html: STYLE }} />
 
       {/* ── Wordmark — absolute, centered, pointer-events off ── */}
       <motion.div
+        aria-hidden="true"
         initial={{ opacity: 0, y: 16 }}
         animate={inView ? { opacity: 1, y: 0 } : {}}
         transition={{ type: "spring", stiffness: 260, damping: 28 }}

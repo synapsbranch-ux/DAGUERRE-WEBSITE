@@ -10,6 +10,8 @@ import { href, routeKeyForPath, routes } from "@/lib/routes";
 type LocaleSwitcherProps = {
   locale: Locale;
   label: string;
+  /** `dark` sur bande sombre (en-tête, pied de page), `light` sur papier. */
+  tone?: "dark" | "light";
   className?: string;
 };
 
@@ -51,7 +53,7 @@ function resolveTarget(pathname: string, current: Locale, target: Locale): strin
   return href(key, target, ...segments);
 }
 
-export function LocaleSwitcher({ locale, label, className }: LocaleSwitcherProps) {
+export function LocaleSwitcher({ locale, label, tone = "dark", className }: LocaleSwitcherProps) {
   const pathname = usePathname();
   const router = useRouter();
 
@@ -86,8 +88,12 @@ export function LocaleSwitcher({ locale, label, className }: LocaleSwitcherProps
               "px-3 py-1.5 transition-colors",
               index > 0 && "border-l border-current/15",
               active
-                ? "bg-white/8 text-[var(--copper-soft)] shadow-[inset_0_0_0_1px_color-mix(in_srgb,var(--copper)_55%,transparent)]"
-                : "text-white/55 hover:bg-white/8 hover:text-white",
+                ? tone === "dark"
+                  ? "bg-white/8 text-[var(--copper-soft)] shadow-[inset_0_0_0_1px_color-mix(in_srgb,var(--copper)_55%,transparent)]"
+                  : "bg-[var(--copper-wash)] text-[var(--copper-deep)] shadow-[inset_0_0_0_1px_color-mix(in_srgb,var(--copper)_45%,transparent)]"
+                : tone === "dark"
+                  ? "text-white/55 hover:bg-white/8 hover:text-white"
+                  : "text-muted-foreground hover:bg-[var(--copper-wash)] hover:text-foreground",
             )}
           >
             {localeLabels[code]}

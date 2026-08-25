@@ -1,7 +1,24 @@
 "use client";
 
+import Link from "next/link";
 import * as React from "react";
 import { AnimatePresence, motion } from "motion/react";
+
+/**
+ * Ruixen UI — Expandable Menu Navbar.
+ *
+ * Adaptations Daguerre :
+ * - `next/link` remplace `<a>` (préchargement et navigation client) ;
+ * - la carte se referme après une navigation (`closeOnSelect`) ;
+ * - `surface={false}` retire le cadre de démonstration pour poser le menu
+ *   au-dessus de la page en mobile ;
+ * - les libellés « Menu / Close » sont traduisibles.
+ *
+ * Le pliage à ressort, le voile, la fermeture par Échap et l'entrée décalée
+ * des lignes sont ceux du composant d'origine.
+ */
+
+const MotionLink = motion.create(Link);
 
 interface NavItem {
   label: string;
@@ -24,6 +41,19 @@ interface ExpandableMenuNavbarProps {
   shortcut?: string;
   height?: number | string;
   className?: string;
+  /** Cadre de démonstration. `false` pour poser le menu sur la page. */
+  surface?: boolean;
+  /** Libellés du bouton de bascule. */
+  labels?: { open: string; close: string };
+  /** Nom accessible de la navigation. */
+  navLabel?: string;
+  /** Contrôle posé à droite du bouton de bascule (sélecteur de langue). */
+  trailing?: React.ReactNode;
+  /**
+   * Ouvre la carte à la hauteur de son contenu plutôt qu'à celle du cadre.
+   * Sans cela, un menu court laisserait une grande zone vide sous les liens.
+   */
+  fitContent?: boolean;
 }
 
 const DEFAULT_SECTIONS: NavSection[] = [
@@ -93,11 +123,17 @@ export default function ExpandableMenuNavbar({
   shortcut = "M",
   height = 560,
   className,
+  surface = true,
+  labels = { close: "Close", open: "Menu" },
+  navLabel,
+  trailing,
+  fitContent = false,
 }: ExpandableMenuNavbarProps) {
   const [open, setOpen] = React.useState(false);
   const containerRef = React.useRef<HTMLDivElement>(null);
   const scrollRef = React.useRef<HTMLDivElement>(null);
   const [measuredOpenHeight, setMeasuredOpenHeight] = React.useState(0);
+  const [contentHeight, setContentHeight] = React.useState(0);
 
   React.useEffect(() => {
     const el = containerRef.current;
@@ -126,10 +162,23 @@ export default function ExpandableMenuNavbar({
     }
   }, [open]);
 
+  React.useEffect(() => {
+    const el = scrollRef.current?.firstElementChild;
+    if (!open || !fitContent || !el) return;
+    const measure = () => setContentHeight(el.scrollHeight);
+    measure();
+    const ro = new ResizeObserver(measure);
+    ro.observe(el);
+    return () => ro.disconnect();
+  }, [open, fitContent]);
+
   const fallbackOpenHeight =
     (typeof height === "number" ? height : 560) - WRAPPER_PADDING;
+  const frameHeight = measuredOpenHeight > 0 ? measuredOpenHeight : fallbackOpenHeight;
   const openHeight =
-    measuredOpenHeight > 0 ? measuredOpenHeight : fallbackOpenHeight;
+    fitContent && contentHeight > 0
+      ? Math.min(frameHeight, contentHeight + COLLAPSED_HEIGHT)
+      : frameHeight;
 
   const flatIndex = React.useMemo(() => {
     const offsets: number[] = [];
@@ -145,7 +194,8 @@ export default function ExpandableMenuNavbar({
     <div
       ref={containerRef}
       className={[
-        "relative w-full overflow-hidden rounded-2xl border border-border bg-background",
+        "relative w-full overflow-hidden",
+        surface ? "rounded-2xl border border-border bg-background" : "",
         className,
       ]
         .filter(Boolean)
@@ -179,12 +229,13 @@ export default function ExpandableMenuNavbar({
             "dark:shadow-[0_1px_2px_rgba(0,0,0,0.4),0_8px_28px_-12px_rgba(0,0,0,0.6)]",
           ].join(" ")}
         >
+          <div className="flex h-14 shrink-0 items-center">
           <button
             type="button"
             onClick={() => setOpen((v) => !v)}
             aria-expanded={open}
             aria-controls="expandable-menu-content"
-            className="flex h-14 shrink-0 items-center justify-between gap-3 px-4 text-foreground outline-none focus-visible:ring-1 focus-visible:ring-foreground/20"
+            className="flex h-14 min-w-0 flex-1 items-center justify-between gap-3 px-4 text-foreground outline-none focus-visible:ring-1 focus-visible:ring-foreground/20"
           >
             <span className="flex items-center gap-2.5">
               {brand ?? <StackedMark />}
@@ -197,7 +248,7 @@ export default function ExpandableMenuNavbar({
                 {shortcut}
               </kbd>
               <span className="font-medium uppercase tracking-[0.08em] text-foreground">
-                {open ? "Close" : "Menu"}
+                {open ? labels.close : labels.open}
               </span>
               <motion.svg
                 width="14"
@@ -218,6 +269,8 @@ export default function ExpandableMenuNavbar({
               </motion.svg>
             </span>
           </button>
+          {trailing ? <div className="shrink-0 pr-3">{trailing}</div> : null}
+          </div>
 
           <AnimatePresence initial={false}>
             {open && (
@@ -232,7 +285,7 @@ export default function ExpandableMenuNavbar({
                 style={{ touchAction: "pan-y" }}
                 className="min-h-0 flex-1 overflow-y-auto overscroll-contain border-t border-border [scrollbar-width:none] [&::-webkit-scrollbar]:hidden"
               >
-                <div className="flex flex-col gap-4 p-3">
+                <nav aria-label={navLabel} className="flex flex-col gap-4 p-3">
                   {sections.map((section, sIdx) => (
                     <div key={sIdx} className="flex flex-col gap-0.5">
                       {section.title && (
@@ -253,9 +306,10 @@ export default function ExpandableMenuNavbar({
                       {section.items.map((item, iIdx) => {
                         const idx = flatIndex[sIdx] + iIdx;
                         return (
-                          <motion.a
+                          <MotionLink
                             key={item.label}
                             href={item.href ?? "#"}
+                            onClick={() => setOpen(false)}
                             target={item.external ? "_blank" : undefined}
                             rel={
                               item.external ? "noopener noreferrer" : undefined
@@ -291,12 +345,13 @@ export default function ExpandableMenuNavbar({
                                 />
                               </svg>
                             </span>
-                          </motion.a>
+                          </MotionLink>
                         );
                       })}
                     </div>
                   ))}
 
+                  {(status || version) && (
                   <motion.div
                     initial={{ opacity: 0 }}
                     animate={{ opacity: 1 }}
@@ -312,7 +367,8 @@ export default function ExpandableMenuNavbar({
                     </span>
                     <span>{version}</span>
                   </motion.div>
-                </div>
+                  )}
+                </nav>
               </motion.div>
             )}
           </AnimatePresence>

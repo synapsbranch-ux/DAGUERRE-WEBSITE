@@ -1,6 +1,14 @@
+/*
+ * `@liquefy-ui/react/tailwind.css` déclare l'ordre des couches en cascade et
+ * doit précéder Tailwind : sans cela, un utilitaire posé sur un composant
+ * Liquefy perdrait contre les styles du paquet.
+ */
+@import "@liquefy-ui/react/tailwind.css";
 @import "tailwindcss";
 @import "tw-animate-css";
 @import "shadcn/tailwind.css";
+/* Tramage Bayer en CSS pur — requis par Cult UI `DitherImage`. */
+@import "dither-plugin";
 
 @custom-variant dark (&:is(.dark *));
 
@@ -58,6 +66,8 @@
   --color-band-rule: var(--band-rule);
   --color-muted-ink: var(--muted-ink);
   --color-faint-ink: var(--faint-ink);
+  --color-surface: var(--surface);
+  --color-surface-sunken: var(--surface-sunken);
 
   --radius-sm: calc(var(--radius) * 0.65);
   --radius-md: var(--radius);
@@ -117,6 +127,23 @@
   --band-rule: color-mix(in srgb, white 14%, transparent);
   --font-mono-stack: ui-monospace, "SFMono-Regular", "Menlo", monospace;
   --radius: 0.7rem;
+
+  /* Échelle de mouvement — un seul endroit pour accorder les durées. */
+  --motion-fast: 180ms;
+  --motion-base: 320ms;
+  --motion-slow: 640ms;
+  --motion-reveal: 900ms;
+  --ease-editorial: cubic-bezier(0.2, 0.72, 0.2, 1);
+  --ease-exit: cubic-bezier(0.4, 0, 1, 1);
+
+  /* Surfaces et ombres — évite les valeurs arbitraires dans les composants. */
+  --surface: var(--ivory-strong);
+  --surface-sunken: #e6e2da;
+  --shadow-plate: 0 1px 2px rgb(7 19 33 / 0.04), 0 18px 44px -28px rgb(7 19 33 / 0.34);
+  --shadow-lifted: 0 24px 80px -32px rgb(7 19 33 / 0.42);
+
+  /* Rythme vertical des bandes de page. */
+  --band-space: clamp(4.5rem, 8vw, 8.5rem);
 
   --background: var(--ivory);
   --foreground: var(--navy-900);

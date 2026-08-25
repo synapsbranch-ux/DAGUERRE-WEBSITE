@@ -1,88 +1,111 @@
-import Link from "next/link";
+import { FolderGit2, Globe, Link2, Mail, type LucideIcon, Phone } from "lucide-react";
 
+import { LocaleSwitcher } from "@/components/layout/LocaleSwitcher";
 import { legalNavKeys, mainNavKeys, secondaryNavKeys } from "@/components/layout/Navigation";
-import { Container } from "@/components/ui/Container";
+import FooterPro from "@/components/ruixen/footer-pro";
+import { WordmarkFooter } from "@/components/ruixen/wordmark-footer";
 import { getSiteSettings, getSocialLinks } from "@/lib/content";
 import type { Dictionary } from "@/lib/dictionaries";
 import type { Locale } from "@/lib/i18n";
+import type { PopulatedRoutes } from "@/lib/navigation";
 import { href, routes, type RouteKey } from "@/lib/routes";
 import { organization, siteConfig } from "@/lib/site";
 
 type FooterProps = {
   locale: Locale;
   dict: Dictionary;
+  populated: PopulatedRoutes;
 };
 
-export async function Footer({ locale, dict }: FooterProps) {
-  const year = new Date().getFullYear();
-  const [managedLinks, settings] = await Promise.all([getSocialLinks(), getSiteSettings(locale)]);
-  const email = typeof settings?.email === "string" && settings.email && !settings.email.includes("example.com") ? settings.email : null;
-  const phone = typeof settings?.phone === "string" && settings.phone ? settings.phone : null;
-  const footerNav = mainNavKeys.filter((key) => key !== "services");
-  const resources = secondaryNavKeys.slice(0, 4);
-
-  return (
-    <footer className="mt-auto bg-[var(--navy-950)] text-white">
-      <Container>
-        <div className="grid gap-10 border-b border-white/10 py-14 sm:grid-cols-2 lg:grid-cols-[1.35fr_.8fr_.8fr_1fr] lg:py-18">
-          <div>
-            <Link href={href("home", locale)} className="font-heading text-2xl font-semibold tracking-[-.04em]">
-              {siteConfig.name}
-            </Link>
-              <p className="mt-4 max-w-[34ch] text-sm leading-6 text-white/66">
-              {locale === "fr"
-                ? "Des données structurées, des décisions plus claires et des équipes plus autonomes."
-                : "Structured data, clearer decisions and more autonomous teams."}
-            </p>
-            <p className="mt-6 text-xs font-bold uppercase tracking-[.16em] text-[var(--copper-soft)]">
-              {organization.name} · {locale === "fr" ? "Services analytiques" : "Analytics services"}
-            </p>
-          </div>
-
-          <FooterLinks title={dict.footer.navigation} locale={locale} keys={footerNav} />
-          <FooterLinks title={dict.footer.resources} locale={locale} keys={resources} />
-
-          <div>
-            <p className="text-[10px] font-bold uppercase tracking-[.16em] text-white/55">{dict.footer.presence}</p>
-            <div className="mt-4 flex flex-col items-start gap-2.5 text-sm text-white/68">
-              <Link href={href("contact", locale)} className="hover:text-[var(--copper-soft)]">{dict.common.contactCta}</Link>
-              {email ? <a href={`mailto:${email}`} className="hover:text-[var(--copper-soft)]">{email}</a> : null}
-              {phone ? <a href={`tel:${phone.replace(/\s+/g, "")}`} className="hover:text-[var(--copper-soft)]">{phone}</a> : null}
-              {managedLinks.slice(0, 4).map((link) => (
-                <a key={link.id} href={link.url} target="_blank" rel="noreferrer noopener" className="hover:text-[var(--copper-soft)]">
-                  {link.label}
-                </a>
-              ))}
-            </div>
-          </div>
-        </div>
-
-        <div className="flex flex-wrap items-center gap-x-5 gap-y-2 py-6 text-[11px] text-white/55">
-          <span className="mr-auto">© {year} {siteConfig.name} · {dict.footer.rights}</span>
-          {legalNavKeys.map((key) => (
-            <Link key={key} href={href(key, locale)} className="hover:text-white">
-              {routes[key].label[locale]}
-            </Link>
-          ))}
-        </div>
-      </Container>
-    </footer>
-  );
+/**
+ * Icône lucide déduite du domaine d'un lien social géré au CMS.
+ *
+ * lucide-react v1 ne fournit plus d'icônes de marque : on retient donc des
+ * pictogrammes génériques, et c'est le libellé du lien — saisi au CMS — qui
+ * nomme la plateforme pour les lecteurs d'écran.
+ */
+function socialIcon(url: string): LucideIcon {
+  const value = url.toLowerCase();
+  if (value.startsWith("mailto:")) return Mail;
+  if (value.startsWith("tel:")) return Phone;
+  if (value.includes("github") || value.includes("gitlab")) return FolderGit2;
+  if (value.includes("linkedin")) return Link2;
+  return Globe;
 }
 
-function FooterLinks({ title, locale, keys }: { title: string; locale: Locale; keys: RouteKey[] }) {
+/**
+ * Pied de page — Ruixen UI « Footer Pro » pour les colonnes et la barre basse,
+ * surmonté du mot-symbole « Wordmark Footer » de la même bibliothèque.
+ *
+ * Les colonnes suivent la navigation sensible au contenu : une rubrique vide
+ * n'y apparaît pas non plus.
+ */
+export async function Footer({ locale, dict, populated }: FooterProps) {
+  const year = new Date().getFullYear();
+  const [managedLinks, settings] = await Promise.all([getSocialLinks(), getSiteSettings(locale)]);
+
+  const visible = (key: RouteKey) => populated[key] !== false;
+  const email =
+    settings?.email && !settings.email.includes("example.com") ? settings.email : undefined;
+  const phone = settings?.phone || undefined;
+
+  const column = (title: string, keys: RouteKey[]) => ({
+    title,
+    links: keys
+      .filter(visible)
+      .map((key) => ({ label: routes[key].label[locale], href: href(key, locale) })),
+  });
+
+  const contactLinks = [
+    { label: dict.common.contactCta, href: href("contact", locale) },
+    ...(email ? [{ label: email, href: `mailto:${email}` }] : []),
+    ...(phone ? [{ label: phone, href: `tel:${phone.replace(/\s+/g, "")}` }] : []),
+  ];
+
+  const columns = [
+    column(dict.footer.navigation, mainNavKeys.filter((key) => key !== "services")),
+    column(dict.footer.resources, secondaryNavKeys),
+    { title: dict.footer.presence, links: contactLinks },
+  ].filter((entry) => entry.links.length > 0);
+
   return (
-    <nav aria-label={title}>
-      <p className="text-[10px] font-bold uppercase tracking-[.16em] text-white/55">{title}</p>
-      <ul className="mt-4 space-y-2.5 text-sm text-white/68">
-        {keys.map((key) => (
-          <li key={key}>
-            <Link href={href(key, locale)} className="transition-colors hover:text-[var(--copper-soft)]">
-              {routes[key].label[locale]}
-            </Link>
-          </li>
-        ))}
-      </ul>
-    </nav>
+    <div className="mt-auto">
+      <FooterPro
+        className="border-white/10 bg-[var(--navy-950)] text-white"
+        containerClassName="max-w-[1440px] px-5 py-14 sm:px-10 lg:px-[130px] lg:py-18"
+        brandMark={
+          <span className="grid size-7 place-items-center rounded-full border border-[var(--copper)]/55 bg-[var(--copper)]/12 font-heading text-[11px] font-bold text-[var(--copper-soft)]">
+            D
+          </span>
+        }
+        brandName={settings?.brandName || siteConfig.name}
+        description={settings?.footerText || siteConfig.baseline[locale]}
+        columns={columns}
+        socials={managedLinks.slice(0, 5).map((link) => ({
+          icon: socialIcon(link.url),
+          href: link.url,
+          label: link.label,
+          external: true,
+        }))}
+        bottomLinks={legalNavKeys.map((key) => ({
+          label: routes[key].label[locale],
+          href: href(key, locale),
+        }))}
+        statusText={`${organization.name} · ${locale === "fr" ? "Services analytiques" : "Analytics services"}`}
+        copyright={`© ${year} ${siteConfig.name} · ${dict.footer.rights}`}
+        trailing={
+          <LocaleSwitcher
+            locale={locale}
+            label={dict.common.language}
+            className="border-white/18 bg-white/5"
+          />
+        }
+      />
+      <WordmarkFooter
+        brandName={siteConfig.name.split(" ").at(-1)?.toUpperCase() ?? siteConfig.name}
+        background="var(--navy-950)"
+        fontFamily="var(--font-heading)"
+      />
+    </div>
   );
 }

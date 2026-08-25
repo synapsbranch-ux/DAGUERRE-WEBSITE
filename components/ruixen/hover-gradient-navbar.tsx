@@ -1,79 +1,38 @@
 "use client";
+import Link from "next/link";
 import React from "react";
 import { motion, Variants } from "motion/react";
-import {
-  Home,
-  Settings,
-  Bell,
-  User,
-  Mail,
-  BarChart3,
-  HelpCircle,
-  LogOut,
-} from "lucide-react";
 
-// --- HoverGradientNavBar Component ---
+import { cn } from "@/lib/utils";
 
-interface HoverGradientMenuItem {
-  icon: React.ReactNode;
+/**
+ * Ruixen UI — Hover Gradient NavBar.
+ *
+ * Adaptations Daguerre :
+ * - les entrées viennent des props (la version d'origine embarquait une
+ *   démo « Home / Messages / Settings ») ;
+ * - `next/link` remplace `<a>` pour conserver le préchargement ;
+ * - la lueur radiale par entrée reprend le cuivre de la charte au lieu des
+ *   bleus et violets de la démo ;
+ * - `variant="inline"` permet de poser la barre dans l'en-tête plutôt qu'en
+ *   dock flottant.
+ *
+ * L'interaction — bascule 3D de l'entrée et halo suivant le survol — est
+ * celle du composant d'origine.
+ */
+
+export interface HoverGradientMenuItem {
+  icon?: React.ReactNode;
   label: string;
   href: string;
-  gradient: string;
-  iconColor: string;
+  /** Dégradé du halo. Cuivre de la charte par défaut. */
+  gradient?: string;
+  current?: boolean;
 }
 
-const menuItems: HoverGradientMenuItem[] = [
-  {
-    icon: <Home className="h-5 w-5" />,
-    label: "Home",
-    href: "#",
-    gradient:
-      "radial-gradient(circle, rgba(59,130,246,0.15) 0%, rgba(37,99,235,0.06) 50%, rgba(29,78,216,0) 100%)",
-    iconColor: "group-hover:text-blue-500 dark:group-hover:text-blue-400",
-  },
-  {
-    icon: <Mail className="h-5 w-5" />,
-    label: "Messages",
-    href: "#",
-    gradient:
-      "radial-gradient(circle, rgba(147,51,234,0.15) 0%, rgba(126,34,206,0.06) 50%, rgba(88,28,135,0) 100%)",
-    iconColor: "group-hover:text-purple-500 dark:group-hover:text-purple-400",
-  },
-  {
-    icon: <Settings className="h-5 w-5" />,
-    label: "Settings",
-    href: "#",
-    gradient:
-      "radial-gradient(circle, rgba(59,130,246,0.15) 0%, rgba(37,99,235,0.06) 50%, rgba(29,78,216,0) 100%)",
-    iconColor: "group-hover:text-blue-500 dark:group-hover:text-blue-400",
-  },
-  {
-    icon: <User className="h-5 w-5" />,
-    label: "Profile",
-    href: "#",
-    gradient:
-      "radial-gradient(circle, rgba(239,68,68,0.15) 0%, rgba(220,38,38,0.06) 50%, rgba(185,28,28,0) 100%)",
-    iconColor: "group-hover:text-red-500 dark:group-hover:text-red-400",
-  },
-  {
-    icon: <HelpCircle className="h-5 w-5" />,
-    label: "Help",
-    href: "#",
-    gradient:
-      "radial-gradient(circle, rgba(20,184,166,0.15) 0%, rgba(13,148,136,0.06) 50%, rgba(15,118,110,0) 100%)",
-    iconColor: "group-hover:text-teal-500 dark:group-hover:text-teal-400",
-  },
-  {
-    icon: <LogOut className="h-5 w-5" />,
-    label: "Logout",
-    href: "#",
-    gradient:
-      "radial-gradient(circle, rgba(161,98,7,0.15) 0%, rgba(133,77,14,0.06) 50%, rgba(100,62,8,0) 100%)",
-    iconColor: "group-hover:text-amber-600 dark:group-hover:text-amber-400",
-  },
-];
+const COPPER_GLOW =
+  "radial-gradient(circle, rgba(196,124,75,0.28) 0%, rgba(196,124,75,0.10) 50%, rgba(196,124,75,0) 100%)";
 
-// Animation variants
 const itemVariants: Variants = {
   initial: { rotateX: 0, opacity: 1 },
   hover: { rotateX: -90, opacity: 0 },
@@ -103,94 +62,113 @@ const sharedTransition = {
   duration: 0.5,
 };
 
-function HoverGradientNavBar(): React.JSX.Element {
-  return (
-    <div className="fixed bottom-0 left-0 w-full md:bottom-4 md:left-1/2 md:-translate-x-1/2 z-50">
-      <motion.nav
-        className="w-full md:w-fit mx-auto px-2 md:px-4 py-2 md:py-3 rounded-none md:rounded-3xl 
-        bg-white/90 dark:bg-black/80 backdrop-blur-lg 
-        border-t md:border border-gray-200/80 dark:border-gray-800/80 
-        shadow-lg md:shadow-xl relative"
-        initial="initial"
-        whileHover="hover"
+export interface HoverGradientNavBarProps {
+  items: HoverGradientMenuItem[];
+  /** `inline` : intégrée à l'en-tête. `dock` : barre flottante d'origine. */
+  variant?: "inline" | "dock";
+  className?: string;
+  "aria-label"?: string;
+}
+
+export function HoverGradientNavBar({
+  items,
+  variant = "inline",
+  className,
+  "aria-label": ariaLabel,
+}: HoverGradientNavBarProps): React.JSX.Element {
+  const nav = (
+    <motion.nav
+      aria-label={ariaLabel}
+      className={cn(
+        variant === "dock"
+          ? "relative mx-auto w-full rounded-none border-t border-white/12 bg-[var(--navy-950)]/92 px-2 py-2 backdrop-blur-lg md:w-fit md:rounded-3xl md:border md:px-4 md:py-3"
+          : "relative",
+        className,
+      )}
+      initial="initial"
+      whileHover="hover"
+    >
+      <ul
+        className={cn(
+          "relative z-10 flex items-center",
+          variant === "dock" ? "justify-around gap-1 md:justify-center md:gap-3" : "gap-1",
+        )}
       >
-        <ul className="flex items-center justify-around md:justify-center gap-1 md:gap-3 relative z-10">
-          {menuItems.map((item: HoverGradientMenuItem) => (
-            <motion.li
-              key={item.label}
-              className="relative flex-1 md:flex-none"
-            >
+        {items.map((item) => {
+          const content = (
+            <>
+              {item.icon ? (
+                <span className="transition-colors duration-300">{item.icon}</span>
+              ) : null}
+              <span className="font-semibold">{item.label}</span>
+            </>
+          );
+
+          return (
+            <motion.li key={item.href} className={cn("relative", variant === "dock" && "flex-1 md:flex-none")}>
               <motion.div
-                className="block rounded-xl md:rounded-2xl overflow-visible group relative"
+                className="group relative block overflow-visible rounded-xl md:rounded-2xl"
                 style={{ perspective: "600px" }}
                 whileHover="hover"
                 initial="initial"
               >
-                {/* Per-item glow */}
+                {/* Halo propre à l'entrée survolée. */}
                 <motion.div
-                  className="absolute inset-0 z-0 pointer-events-none rounded-xl md:rounded-2xl"
+                  className="pointer-events-none absolute inset-0 z-0 rounded-xl md:rounded-2xl"
                   variants={glowVariants}
-                  style={{
-                    background: item.gradient,
-                    opacity: 0,
-                  }}
+                  style={{ background: item.gradient ?? COPPER_GLOW, opacity: 0 }}
                 />
-                {/* Front-facing */}
-                <motion.a
-                  href={item.href}
-                  className="flex flex-col md:flex-row items-center justify-center gap-0.5 md:gap-2 
-                  px-2 py-1.5 md:px-4 md:py-2 relative z-10 
-                  bg-transparent text-gray-600 dark:text-gray-300 
-                  group-hover:text-gray-900 dark:group-hover:text-white 
-                  transition-colors rounded-xl md:rounded-2xl text-xs md:text-sm"
+                {/* Face avant. */}
+                <motion.span
+                  className="relative z-10 flex items-center justify-center gap-2 rounded-xl px-3 py-2 text-[13px] transition-colors md:rounded-2xl"
                   variants={itemVariants}
                   transition={sharedTransition}
-                  style={{
-                    transformStyle: "preserve-3d",
-                    transformOrigin: "center bottom",
-                  }}
+                  style={{ transformStyle: "preserve-3d", transformOrigin: "center bottom" }}
                 >
-                  <span
-                    className={`transition-colors duration-300 ${item.iconColor}`}
-                  >
-                    {item.icon}
-                  </span>
-                  <span className="hidden md:inline font-medium">
-                    {item.label}
-                  </span>
-                </motion.a>
-                {/* Back-facing */}
-                <motion.a
-                  href={item.href}
-                  className="flex flex-col md:flex-row items-center justify-center gap-0.5 md:gap-2 
-                  px-2 py-1.5 md:px-4 md:py-2 absolute inset-0 z-10 
-                  bg-transparent text-gray-600 dark:text-gray-300 
-                  group-hover:text-gray-900 dark:group-hover:text-white 
-                  transition-colors rounded-xl md:rounded-2xl text-xs md:text-sm"
+                  {content}
+                </motion.span>
+                {/* Face arrière — celle qui monte au survol. */}
+                <motion.span
+                  className="absolute inset-0 z-10 flex items-center justify-center gap-2 rounded-xl px-3 py-2 text-[13px] text-[var(--copper-soft)] transition-colors md:rounded-2xl"
                   variants={backVariants}
                   transition={sharedTransition}
+                  aria-hidden="true"
                   style={{
                     transformStyle: "preserve-3d",
                     transformOrigin: "center top",
                     transform: "rotateX(90deg)",
                   }}
                 >
-                  <span
-                    className={`transition-colors duration-300 ${item.iconColor}`}
-                  >
-                    {item.icon}
-                  </span>
-                  <span className="hidden md:inline font-medium">
-                    {item.label}
-                  </span>
-                </motion.a>
+                  {content}
+                </motion.span>
+                {/* Le lien couvre la pile : une seule cible, un seul nom accessible. */}
+                <Link
+                  href={item.href}
+                  aria-current={item.current ? "page" : undefined}
+                  className={cn(
+                    "absolute inset-0 z-20 rounded-xl focus-visible:outline-2 focus-visible:outline-offset-2 focus-visible:outline-[var(--copper-soft)] md:rounded-2xl",
+                    item.current && "shadow-[inset_0_-2px_0_0_var(--copper)]",
+                  )}
+                >
+                  <span className="sr-only">{item.label}</span>
+                </Link>
               </motion.div>
             </motion.li>
-          ))}
-        </ul>
-      </motion.nav>
-    </div>
+          );
+        })}
+      </ul>
+    </motion.nav>
   );
+
+  if (variant === "dock") {
+    return (
+      <div className="fixed bottom-0 left-0 z-50 w-full md:bottom-4 md:left-1/2 md:w-auto md:-translate-x-1/2">
+        {nav}
+      </div>
+    );
+  }
+
+  return nav;
 }
 
 export default HoverGradientNavBar;
