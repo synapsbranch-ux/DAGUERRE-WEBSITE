@@ -16,6 +16,7 @@ import {
   getPage,
   getProfile,
   getRecentPosts,
+  getServices,
   getSiteSettings,
   getSkills,
 } from "@/lib/content";
@@ -65,7 +66,7 @@ const defaultOrder = [
 ] as const;
 
 export default async function Home() {
-  const [locale, dict, projects, posts, profile, settings, sections, skills, engagement] =
+  const [locale, dict, projects, posts, profile, settings, sections, skills, services, engagement] =
     await Promise.all([
       getLocale(),
       getDictionary(),
@@ -75,6 +76,7 @@ export default async function Home() {
       getSiteSettings(),
       getHomeSections(),
       getSkills(),
+      getServices(),
       getPage("engagement"),
     ]);
 
@@ -106,7 +108,15 @@ export default async function Home() {
         section={section("projects")}
       />
     ),
-    datakle: <DataklePreview key="datakle" locale={locale} dict={dict} section={section("datakle")} />,
+    datakle: (
+      <DataklePreview
+        key="datakle"
+        locale={locale}
+        dict={dict}
+        services={services}
+        section={section("datakle")}
+      />
+    ),
     about: (
       <AboutPreview
         key="about"

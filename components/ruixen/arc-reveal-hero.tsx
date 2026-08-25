@@ -35,6 +35,8 @@ export interface ArcRevealHeroProps {
   greetingClassName?: string;
   /** Class for the wrapper around `children` (the revealed content). */
   revealClassName?: string;
+  /** Couleur du rideau qui monte. Doit être celle de la bande révélée. */
+  curtainColor?: string;
   /**
    * Optional `sessionStorage` key — when set, the intro plays only once per
    * session for the same key. Leave unset to replay on every mount.
@@ -69,10 +71,19 @@ export function ArcRevealHero({
   introClassName,
   greetingClassName,
   revealClassName,
+  curtainColor = "var(--background)",
   storageKey,
   children,
 }: ArcRevealHeroProps) {
   const prefersReducedMotion = useReducedMotion();
+
+  /*
+   * Adaptation Daguerre : le rideau n'est armé qu'après l'hydratation.
+   * Rendu côté serveur, il masquerait le titre dans le HTML livré — et un
+   * visiteur sans JavaScript resterait devant un écran plein.
+   */
+  const [armed, setArmed] = React.useState(false);
+  React.useEffect(() => setArmed(true), []);
 
   const [phase, setPhase] = React.useState<Phase>("intro");
   const [index, setIndex] = React.useState(0);
@@ -108,7 +119,7 @@ export function ArcRevealHero({
 
   // Greeting cycle.
   React.useEffect(() => {
-    if (phase !== "intro") return;
+    if (phase !== "intro" || !armed) return;
     const isLast = index >= greetings.length - 1;
     if (isLast) {
       const t = window.setTimeout(() => setPhase("reveal"), greetingHold + 220);
@@ -116,7 +127,7 @@ export function ArcRevealHero({
     }
     const t = window.setTimeout(() => setIndex((i) => i + 1), greetingHold);
     return () => window.clearTimeout(t);
-  }, [phase, index, greetingHold, greetings.length]);
+  }, [armed, phase, index, greetingHold, greetings.length]);
 
   // Drive the curtain reveal.
   React.useEffect(() => {
@@ -138,7 +149,7 @@ export function ArcRevealHero({
     return () => controls.stop();
   }, [phase, progress, revealDuration, storageKey]);
 
-  const showOverlay = phase !== "done";
+  const showOverlay = armed && phase !== "done";
   const current = greetings[Math.min(index, greetings.length - 1)];
 
   return (
@@ -192,7 +203,7 @@ export function ArcRevealHero({
               preserveAspectRatio="none"
               aria-hidden
             >
-              <motion.path d={arcPath} style={{ fill: "var(--background)" }} />
+              <motion.path d={arcPath} style={{ fill: curtainColor }} />
             </svg>
           </motion.div>
         )}

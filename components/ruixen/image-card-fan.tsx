@@ -1,8 +1,17 @@
 "use client";
 
+import Image from "next/image";
 import * as React from "react";
 import { motion, useReducedMotion } from "motion/react";
 import { cn } from "@/lib/utils";
+
+/**
+ * Ruixen UI — Image Card Fan.
+ *
+ * Adaptations Daguerre : `next/image` remplace `<img>` (optimisation et
+ * dimensionnement), les visuels non optimisables restent servis tels quels,
+ * et le pointeur grossier est détecté au montage sans état intermédiaire.
+ */
 
 export interface FanCardItem {
   /** Stable, unique identifier. */
@@ -13,6 +22,8 @@ export interface FanCardItem {
   title: string;
   /** Shown on the opposite side while this card is active. */
   description?: string;
+  /** Sert l'image telle quelle (source distante non déclarée à Next). */
+  unoptimized?: boolean;
 }
 
 export interface ImageCardFanProps {
@@ -68,6 +79,9 @@ export function ImageCardFan({
   const [hoveredId, setHoveredId] = React.useState<string | null>(null);
   // Dragging a card claims the vertical touch axis, which on a phone means
   // swiping over the fan scrolls nothing. Pointer devices only.
+  // `matchMedia` n'existe pas au rendu serveur : la valeur est lue au montage,
+  // via un initialiseur paresseux plutôt qu'un effet qui déclencherait un
+  // second rendu immédiat.
   const [canDrag, setCanDrag] = React.useState(false);
 
   // Fall back to the first card whenever the requested id is not in the hand:
@@ -288,13 +302,16 @@ export function ImageCardFan({
                 }}
                 type="button"
               >
-                {/* Decorative: the button label and the side text carry the name. */}
-                <img
+                {/* Décoratif : le libellé du bouton et le texte latéral portent le nom. */}
+                <Image
                   alt=""
                   className="aspect-[5/7] select-none rounded-xl border border-border bg-muted object-cover shadow-lg"
                   draggable={false}
+                  height={Math.round(width * 1.4)}
                   src={card.src}
-                  style={{ width }}
+                  style={{ height: "auto", width }}
+                  unoptimized={card.unoptimized}
+                  width={Math.round(width)}
                 />
               </motion.button>
             </motion.div>

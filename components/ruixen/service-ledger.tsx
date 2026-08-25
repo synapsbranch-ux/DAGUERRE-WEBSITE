@@ -1,9 +1,20 @@
 "use client";
 
+import Image from "next/image";
 import * as React from "react";
 import Link from "next/link";
 import { ArrowUpRight } from "lucide-react";
 import { cn } from "@/lib/utils";
+
+/**
+ * Ruixen UI — Service Ledger.
+ *
+ * Adaptations Daguerre : les couleurs suivent la couleur héritée (`current`)
+ * pour que le registre tienne aussi bien sur la bande ivoire que sur la bande
+ * encre, la bande d'onglets accepte sa propre surface (`stripClassName`), la
+ * largeur de colonne est réglable, `next/image` remplace `<img>`, et le libellé
+ * de la navigation est traduisible.
+ */
 
 /* ── types ───────────────────────────────────────────────────── */
 
@@ -20,6 +31,8 @@ export interface ServiceEntry {
   items?: string[];
   /** Optional preview image src */
   image?: string;
+  /** Sert l'image telle quelle (source distante non déclarée à Next). */
+  unoptimizedImage?: boolean;
   /** Optional preview video src — takes priority over `image` when both are provided */
   video?: string;
   /** Optional poster image shown before the video plays */
@@ -36,6 +49,16 @@ export interface ServiceLedgerProps {
   description?: string;
   entries?: ServiceEntry[];
   className?: string;
+  /** Surface de la bande d'onglets collante. */
+  stripClassName?: string;
+  /** Largeur de la colonne de contenu. */
+  contentClassName?: string;
+  /** Largeur du cadre extérieur. */
+  frameClassName?: string;
+  /** Nom accessible de la navigation par services. */
+  navLabel?: string;
+  /** Rend l'en-tête. `false` quand la bande porte déjà son titre. */
+  showHeader?: boolean;
 }
 
 /* ── defaults ────────────────────────────────────────────────── */
@@ -104,6 +127,11 @@ export function ServiceLedger({
   description = "Four ways our team plugs into your roadmap — from a single sprint to a year-long partnership.",
   entries = defaultServices,
   className,
+  stripClassName,
+  contentClassName,
+  frameClassName,
+  navLabel = "Service navigation",
+  showHeader = true,
 }: ServiceLedgerProps) {
   const [activeIndex, setActiveIndex] = React.useState(0);
   const [prefersReducedMotion, setPrefersReducedMotion] = React.useState(false);
@@ -246,25 +274,30 @@ export function ServiceLedger({
   return (
     <section ref={sectionRef} className={cn("py-16 md:py-32", className)}>
       {/* ── header ──────────────────────────────────────── */}
-      <div className="mx-auto w-full max-w-5xl px-4 sm:px-6">
-        <div className="mx-auto max-w-3xl">
-          <h2 className="mb-3 text-balance text-2xl font-bold tracking-tight text-foreground sm:text-3xl md:mb-4 md:text-5xl">
-            {title}
-          </h2>
-          <p className="mb-6 text-balance text-sm text-muted-foreground sm:text-base md:text-lg">
-            {description}
-          </p>
+      {showHeader && (
+        <div className={cn("mx-auto w-full max-w-5xl px-4 sm:px-6", frameClassName)}>
+          <div className={cn("mx-auto max-w-3xl", contentClassName)}>
+            <h2 className="mb-3 text-balance font-heading text-2xl font-bold tracking-tight sm:text-3xl md:mb-4 md:text-5xl">
+              {title}
+            </h2>
+            <p className="mb-6 text-balance text-sm text-current/70 sm:text-base md:text-lg">
+              {description}
+            </p>
+          </div>
         </div>
-      </div>
+      )}
 
       {/* ── sticky tab strip ────────────────────────────── */}
       <nav
-        aria-label="Service navigation"
+        aria-label={navLabel}
         style={{ top: "var(--ledger-sticky-top, 0px)" }}
-        className="sticky z-20 mt-8 border-b border-border bg-background/90 backdrop-blur-sm md:mt-16"
+        className={cn(
+          "sticky z-20 mt-8 border-b border-current/15 backdrop-blur-sm md:mt-16",
+          stripClassName ?? "bg-background/90",
+        )}
       >
-        <div className="mx-auto w-full max-w-5xl px-4 sm:px-6">
-          <div className="mx-auto max-w-3xl">
+        <div className={cn("mx-auto w-full max-w-5xl px-4 sm:px-6", frameClassName)}>
+          <div className={cn("mx-auto max-w-3xl", contentClassName)}>
             <div
               ref={tabsRef}
               className="flex items-center gap-0 overflow-x-auto [mask-image:linear-gradient(to_right,transparent,black_2%,black_98%,transparent)] [scrollbar-width:none] [&::-webkit-scrollbar]:hidden"
@@ -280,13 +313,13 @@ export function ServiceLedger({
                     className={cn(
                       "-mb-px inline-flex shrink-0 items-center gap-1.5 whitespace-nowrap border-b-2 px-3 py-3.5 text-sm transition-colors focus-visible:outline-none focus-visible:ring-2 focus-visible:ring-ring focus-visible:ring-offset-2 sm:gap-2 sm:px-4 sm:py-4",
                       isActive
-                        ? "border-foreground text-foreground"
-                        : "border-transparent text-muted-foreground hover:text-foreground",
+                        ? "border-[var(--copper)] text-current"
+                        : "border-transparent text-current/55 hover:text-current",
                     )}
                   >
                     <span className="font-semibold">{entry.code}</span>
                     {entry.meta && (
-                      <span className="hidden text-xs text-muted-foreground sm:inline">
+                      <span className="hidden text-xs text-current/55 sm:inline">
                         {entry.meta}
                       </span>
                     )}
@@ -299,8 +332,8 @@ export function ServiceLedger({
       </nav>
 
       {/* ── content panels ──────────────────────────────── */}
-      <div className="mx-auto w-full max-w-5xl px-4 sm:px-6">
-        <div className="mx-auto mt-10 flex max-w-3xl flex-col space-y-14 md:mt-16 md:space-y-24">
+      <div className={cn("mx-auto w-full max-w-5xl px-4 sm:px-6", frameClassName)}>
+        <div className={cn("mx-auto mt-10 flex max-w-3xl flex-col space-y-14 md:mt-16 md:space-y-24", contentClassName)}>
           {entries.map((entry, index) => (
             <div
               key={`${entry.code}-${index}`}
@@ -314,15 +347,15 @@ export function ServiceLedger({
               }}
               className="flex flex-col"
             >
-              <h3 className="mb-3 text-balance text-xl font-bold leading-tight text-foreground/90 sm:text-2xl md:text-3xl">
+              <h3 className="mb-3 text-balance font-heading text-xl font-bold leading-tight sm:text-2xl md:text-3xl">
                 {entry.title}
               </h3>
-              <p className="text-balance text-sm text-muted-foreground sm:text-base md:text-lg">
+              <p className="text-balance text-sm text-current/70 sm:text-base md:text-lg">
                 {entry.description}
               </p>
 
               {entry.items && entry.items.length > 0 && (
-                <ul className="ml-4 mt-4 space-y-1.5 text-sm text-muted-foreground sm:text-base">
+                <ul className="ml-4 mt-4 space-y-1.5 text-sm text-current/70 sm:text-base">
                   {entry.items.map((item, itemIndex) => (
                     <li key={itemIndex} className="list-disc">
                       {item}
@@ -345,18 +378,21 @@ export function ServiceLedger({
                   className="mt-6 aspect-video w-full rounded-lg bg-muted object-cover ring-1 ring-border/60 md:mt-8"
                 />
               ) : entry.image ? (
-                // eslint-disable-next-line @next/next/no-img-element
-                <img
+                <Image
                   src={entry.image}
-                  alt={`${entry.title} visual`}
-                  className="mt-6 aspect-video w-full rounded-lg bg-muted object-cover ring-1 ring-border/60 md:mt-8"
+                  alt=""
+                  width={1280}
+                  height={720}
+                  sizes="(max-width: 768px) 100vw, 720px"
+                  unoptimized={entry.unoptimizedImage}
+                  className="mt-6 aspect-video w-full rounded-lg bg-muted object-cover ring-1 ring-current/15 md:mt-8"
                 />
               ) : null}
 
               {entry.cta && (
                 <Link
                   href={entry.cta.href}
-                  className="mt-5 inline-flex items-center gap-1.5 self-start text-sm font-semibold text-foreground underline-offset-4 hover:underline sm:text-base md:mt-6"
+                  className="mt-5 inline-flex items-center gap-1.5 self-start text-sm font-semibold underline-offset-4 hover:underline sm:text-base md:mt-6"
                 >
                   {entry.cta.label}
                   <ArrowUpRight className="size-4 md:size-5" />

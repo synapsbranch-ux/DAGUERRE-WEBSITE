@@ -1,6 +1,6 @@
 import Link from "next/link";
 
-import { Reveal } from "@/components/motion/Reveal";
+import { PerspectiveText } from "@/components/ruixen/perspective-text";
 import { Badge } from "@/components/ui/badge";
 import { Button } from "@/components/ui/button";
 import { Container } from "@/components/ui/Container";
@@ -21,6 +21,11 @@ type SkillsPreviewProps = {
 /**
  * Compétences sur l'accueil.
  *
+ * Ruixen UI « Perspective Text » pose le mot d'ouverture sur un arc incliné :
+ * du texte réel, projeté en SVG, qui reste sélectionnable et annoncé tel quel
+ * aux lecteurs d'écran. Aucune animation — la bande fait partie du tiers calme
+ * de la page.
+ *
  * Alimentée par la collection `Skill` : une compétence désactivée dans le CMS
  * disparaît d'ici comme de la page dédiée. Sans compétence active, la bande
  * n'est pas rendue plutôt que d'afficher un cadre vide.
@@ -29,49 +34,54 @@ export function SkillsPreview({ locale, dict, groups, section }: SkillsPreviewPr
   if (groups.length === 0) return null;
 
   const labels = dict.pages.skills;
+  const heading = section?.title || labels.title;
 
   return (
-    <Container>
-      <section id="competences" className="scroll-mt-24 py-20 sm:py-24">
-        <div className="flex flex-wrap items-end gap-6">
-          <div className="flex-1">
-            <p className="eyebrow">{section?.eyebrow || labels.eyebrow}</p>
-            <h2 className="mt-4 max-w-[22ch] text-3xl leading-tight sm:text-[46px]">
-              {section?.title || labels.title}
-            </h2>
-            {section?.lead ? (
-              <p className="mt-4 max-w-[62ch] text-[15px] leading-7 text-muted-foreground">
-                {section.lead}
-              </p>
-            ) : null}
-          </div>
-          <Button asChild variant="ghost">
-            <Link href={href("skills", locale)}>{labels.title} →</Link>
-          </Button>
-        </div>
+    <section id="competences" className="scroll-mt-24 border-y border-border bg-[var(--surface-sunken)] py-[var(--band-space)]">
+      <Container>
+        <p className="eyebrow">{section?.eyebrow || labels.eyebrow}</p>
 
-        <ul className="mt-9 grid gap-4 sm:grid-cols-2 lg:grid-cols-3">
-          {groups.map((group, index) => (
-            <li key={group.slug}>
-              <Reveal delay={index * 60} className="h-full">
-                <div className="h-full rounded-2xl border border-border bg-white/45 p-5">
-                  <h3 className="text-lg">{group.name}</h3>
-                  {group.description ? (
-                    <p className="mt-1.5 text-sm leading-6 text-muted-foreground">{group.description}</p>
-                  ) : null}
-                  <ul className="mt-4 flex flex-wrap gap-1.5">
-                    {group.skills.map((skill) => (
-                      <li key={skill.name}>
-                        <Badge variant={skill.featured ? "secondary" : "outline"}>{skill.name}</Badge>
-                      </li>
-                    ))}
-                  </ul>
-                </div>
-              </Reveal>
+        <h2 className="mt-6 overflow-hidden text-[clamp(3rem,11vw,9rem)] leading-[0.9] text-[var(--navy-900)]">
+          <PerspectiveText
+            text={heading}
+            as="span"
+            curve={0.05}
+            tilt={26}
+            stretch={1.28}
+            fontFamily="var(--font-heading)"
+          />
+        </h2>
+
+        {section?.lead ? (
+          <p className="mt-8 max-w-[62ch] text-[15px] leading-7 text-muted-foreground">
+            {section.lead}
+          </p>
+        ) : null}
+
+        <ul className="mt-12 grid gap-x-10 gap-y-8 sm:grid-cols-2 lg:grid-cols-3">
+          {groups.map((group) => (
+            <li key={group.slug} className="border-t border-border pt-5">
+              <h3 className="font-heading text-lg tracking-[-0.02em]">{group.name}</h3>
+              {group.description ? (
+                <p className="mt-1.5 text-sm leading-6 text-muted-foreground">
+                  {group.description}
+                </p>
+              ) : null}
+              <ul className="mt-4 flex flex-wrap gap-1.5">
+                {group.skills.map((skill) => (
+                  <li key={skill.name}>
+                    <Badge variant={skill.featured ? "secondary" : "outline"}>{skill.name}</Badge>
+                  </li>
+                ))}
+              </ul>
             </li>
           ))}
         </ul>
-      </section>
-    </Container>
+
+        <Button asChild variant="ghost" className="mt-10">
+          <Link href={href("skills", locale)}>{labels.title} →</Link>
+        </Button>
+      </Container>
+    </section>
   );
 }
