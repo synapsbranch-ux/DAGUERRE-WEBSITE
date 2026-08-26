@@ -52,7 +52,17 @@ export function Hero({ locale, dict, backgroundImage, eyebrow, title, lead }: He
 
   return (
     <ArcRevealHero
-      className="min-h-0 bg-[var(--navy-950)]"
+      /*
+       * L'en-tête flotte en `sticky`/`fixed` au-dessus du contenu plutôt que
+       * de s'y intégrer : il réserve un bandeau de fond de page (72px sous
+       * xl — la barre repliée mobile —, 100px à partir de xl — marge +
+       * pilule) avant le premier bloc. Ce bandeau serait de la couleur de
+       * fond de page (parchemin) et non du bleu nuit de la bannière. La
+       * marge négative fait remonter la bannière derrière ; le padding du
+       * conteneur ci-dessous compense d'autant pour que le contenu reste à
+       * la même hauteur qu'avant.
+       */
+      className="min-h-0 -mt-[72px] bg-[var(--navy-950)] xl:-mt-[100px]"
       introClassName="bg-[var(--ivory)]"
       greetingClassName="font-heading text-[var(--navy-900)]"
       curtainColor="var(--navy-950)"
@@ -99,7 +109,7 @@ export function Hero({ locale, dict, backgroundImage, eyebrow, title, lead }: He
         <div className="absolute inset-0 -z-10 bg-[linear-gradient(90deg,rgba(5,13,24,.98)_0%,rgba(5,13,24,.90)_35%,rgba(5,13,24,.52)_62%,rgba(5,13,24,.16)_100%)]" />
         <div className="absolute inset-0 -z-10 bg-[linear-gradient(0deg,rgba(5,13,24,.74)_0%,transparent_34%)]" />
 
-        <Container className="relative flex min-h-[80svh] flex-col justify-center pb-28 pt-20 sm:pb-32 sm:pt-24 lg:pb-36">
+        <Container className="relative flex min-h-[80svh] flex-col justify-center pb-28 pt-[152px] sm:pb-32 sm:pt-[168px] lg:pb-36 xl:pt-[196px]">
           <div className="max-w-[760px]">
             <p className="eyebrow-light">{eyebrow || hero.eyebrow}</p>
             <h1 className="mt-6 max-w-[13ch] text-[clamp(2.65rem,6.1vw,5.65rem)] leading-[.98] text-white">

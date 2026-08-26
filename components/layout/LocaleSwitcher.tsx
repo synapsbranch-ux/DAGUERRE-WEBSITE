@@ -70,7 +70,7 @@ export function LocaleSwitcher({ locale, label, tone = "dark", className }: Loca
       role="group"
       aria-label={label}
       className={cn(
-        "inline-flex overflow-hidden rounded-md border border-border text-[13px]",
+        "inline-flex shrink-0 overflow-hidden rounded-md border border-border text-[13px]",
         className,
       )}
     >

@@ -133,6 +133,7 @@ function GlassForm({
         }}
         style={{
           width: "100%",
+          minWidth: 0,
           maxWidth: 380,
           display: "flex",
           flexDirection: "column",
@@ -285,6 +286,7 @@ function FormField({
         autoComplete={autoComplete}
         style={{
           flex: 1,
+          minWidth: 0,
           fontSize: 15,
           color: P.hi,
           background: "transparent",
@@ -518,12 +520,14 @@ function FormSegment({
     <div
       style={{
         display: "flex",
+        flexWrap: "wrap",
         alignItems: "center",
-        padding: "0 16px",
+        rowGap: 8,
+        padding: "10px 16px",
         minHeight: 44,
       }}
     >
-      <div style={{ fontSize: 15, color: P.hi, flex: 1 }}>{label}</div>
+      <div style={{ fontSize: 15, color: P.hi, flex: 1, minWidth: 0 }}>{label}</div>
       <div
         style={{
           display: "flex",
