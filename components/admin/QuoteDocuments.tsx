@@ -2,6 +2,7 @@
 
 import { useRouter } from "next/navigation";
 
+import { ConfirmAction } from "@/components/admin/ConfirmAction";
 import { FileUpload } from "@/components/admin/FileUpload";
 
 export type QuoteDocument = { id: string; filename: string; size: string; createdAt: string };
@@ -41,6 +42,15 @@ export function QuoteDocuments({
               </a>
               <span className="shrink-0 text-xs text-muted-foreground">{document.size}</span>
               <span className="shrink-0 text-xs text-muted-foreground">{document.createdAt}</span>
+              <ConfirmAction
+                trigger="Supprimer"
+                title="Supprimer ce document ?"
+                description="Le fichier est effacé du stockage. Le client cesse d'y avoir accès."
+                confirmLabel="Supprimer"
+                endpoint={`/api/admin/files/${document.id}`}
+                variant="ghost"
+                size="sm"
+              />
             </li>
           ))}
         </ul>

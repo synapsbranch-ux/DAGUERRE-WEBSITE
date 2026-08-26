@@ -6,6 +6,7 @@ import { ContentResourceModel } from "@/lib/db/models/platform";
 import { readJson } from "@/lib/http";
 import { recordAudit } from "@/lib/platform/audit";
 import { isDuplicateKeyError } from "@/lib/platform/idempotency";
+import { announceRestrictedResource } from "@/lib/platform/resources";
 import { revalidateContent } from "@/lib/revalidate";
 import { contentResourceInputSchema } from "@/lib/validation-platform";
 
@@ -44,6 +45,15 @@ export async function POST(request: Request) {
     });
 
     if (data.status === "published") {
+      // Seules les ressources nominatives sont annoncées à leurs destinataires.
+      await announceRestrictedResource({
+        slug: data.slug.fr,
+        title: data.title.fr,
+        visibility: data.visibility,
+        status: data.status,
+        allowedUserIds: data.allowedUserIds,
+      });
+
       await recordAudit({
         actorId: session?.user.id,
         actorEmail: session?.user.email,

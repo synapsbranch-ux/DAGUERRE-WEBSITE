@@ -6,6 +6,7 @@ import { ContentResourceModel } from "@/lib/db/models/platform";
 import { readJson, validObjectId } from "@/lib/http";
 import { recordAudit } from "@/lib/platform/audit";
 import { isDuplicateKeyError } from "@/lib/platform/idempotency";
+import { announceRestrictedResource } from "@/lib/platform/resources";
 import { revalidateContent } from "@/lib/revalidate";
 import { contentResourceInputSchema } from "@/lib/validation-platform";
 
@@ -54,6 +55,21 @@ export async function PATCH(request: Request, { params }: Ctx) {
     if (!doc) return notFound();
 
     const session = await readSession();
+
+    /*
+     * L'annonce ne part qu'au **passage** en publication : réenregistrer une
+     * ressource déjà publiée pour corriger une virgule ne doit pas réécrire à
+     * ses destinataires.
+     */
+    if (previous.status !== "published" && data.status === "published") {
+      await announceRestrictedResource({
+        slug: data.slug.fr,
+        title: data.title.fr,
+        visibility: data.visibility,
+        status: data.status,
+        allowedUserIds: data.allowedUserIds,
+      });
+    }
 
     // Seul un changement d'état de publication mérite une trace : enregistrer
     // chaque correction de faute de frappe noierait le journal.
