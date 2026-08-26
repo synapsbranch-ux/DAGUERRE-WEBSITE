@@ -8,14 +8,15 @@ import { DataklePreview } from "@/components/sections/DataklePreview";
 import { EngagementPreview } from "@/components/sections/EngagementPreview";
 import { Hero } from "@/components/sections/Hero";
 import { ProjectsPreview } from "@/components/sections/ProjectsPreview";
+import { ResultsPreview } from "@/components/sections/ResultsPreview";
 import { SkillsPreview } from "@/components/sections/SkillsPreview";
 import { DataDecisions } from "@/components/sections/DataDecisions";
 import {
   getFeaturedProjects,
   getHomeSections,
-  getPage,
   getProfile,
   getRecentPosts,
+  getServices,
   getSiteSettings,
   getSkills,
 } from "@/lib/content";
@@ -54,18 +55,19 @@ export async function generateMetadata({ params }: PageProps<"/[locale]">): Prom
 /** Ordre de repli, utilisé tant que le CMS ne pilote pas la composition. */
 const defaultOrder = [
   "hero",
+  "expertise",
   "data",
   "projects",
   "datakle",
+  "results",
   "about",
   "engagement",
-  "expertise",
   "blog",
   "contact",
 ] as const;
 
 export default async function Home() {
-  const [locale, dict, projects, posts, profile, settings, sections, skills, engagement] =
+  const [locale, dict, projects, posts, profile, settings, sections, skills, services] =
     await Promise.all([
       getLocale(),
       getDictionary(),
@@ -75,7 +77,7 @@ export default async function Home() {
       getSiteSettings(),
       getHomeSections(),
       getSkills(),
-      getPage("engagement"),
+      getServices(),
     ]);
 
   const byKey = new Map<string, HomeSection>(sections.map((section) => [section.key, section]));
@@ -106,7 +108,24 @@ export default async function Home() {
         section={section("projects")}
       />
     ),
-    datakle: <DataklePreview key="datakle" locale={locale} dict={dict} section={section("datakle")} />,
+    results: (
+      <ResultsPreview
+        key="results"
+        locale={locale}
+        dict={dict}
+        settings={settings}
+        section={section("results")}
+      />
+    ),
+    datakle: (
+      <DataklePreview
+        key="datakle"
+        locale={locale}
+        dict={dict}
+        services={services}
+        section={section("datakle")}
+      />
+    ),
     about: (
       <AboutPreview
         key="about"
@@ -117,13 +136,7 @@ export default async function Home() {
       />
     ),
     engagement: (
-      <EngagementPreview
-        key="engagement"
-        locale={locale}
-        dict={dict}
-        photo={section("engagement")?.image ?? engagement?.heroImage}
-        section={section("engagement")}
-      />
+      <EngagementPreview key="engagement" locale={locale} dict={dict} section={section("engagement")} />
     ),
     expertise: <SkillsPreview key="expertise" locale={locale} dict={dict} groups={skills} section={section("expertise")} />,
     blog: <BlogPreview key="blog" locale={locale} dict={dict} posts={posts} section={section("blog")} />,

@@ -5,9 +5,11 @@ import "../globals.css";
 import { Breadcrumbs } from "@/components/layout/Breadcrumbs";
 import { Footer } from "@/components/layout/Footer";
 import { Header } from "@/components/layout/Header";
+import { LiquefyRoot } from "@/components/liquefy/LiquefyRoot";
 import { JsonLd } from "@/components/seo/JsonLd";
 import { getDictionaryFor } from "@/lib/dictionaries";
 import { getSocialLinks } from "@/lib/content";
+import { getPopulatedRoutes } from "@/lib/navigation";
 import { fontVariables } from "@/lib/fonts";
 import { isLocale, locales, ogLocales } from "@/lib/i18n";
 import { alternatesFor } from "@/lib/routes";
@@ -109,7 +111,11 @@ export default async function RootLayout({ children, params }: LayoutProps<"/[lo
   const { locale } = await params;
   if (!isLocale(locale)) notFound();
 
-  const [dict, socialLinks] = await Promise.all([getDictionaryFor(locale), getSocialLinks()]);
+  const [dict, socialLinks, populated] = await Promise.all([
+    getDictionaryFor(locale),
+    getSocialLinks(),
+    getPopulatedRoutes(locale),
+  ]);
 
   return (
     <html lang={locale} className={`${fontVariables} h-full`}>
@@ -121,12 +127,14 @@ export default async function RootLayout({ children, params }: LayoutProps<"/[lo
         >
           {dict.common.skipToContent}
         </a>
-        <Header locale={locale} dict={dict} />
-        <Breadcrumbs locale={locale} label={dict.common.breadcrumb} />
-        <main id="contenu" className="flex-1">
-          {children}
-        </main>
-        <Footer locale={locale} dict={dict} />
+        <LiquefyRoot>
+          <Header locale={locale} dict={dict} populated={populated} />
+          <Breadcrumbs locale={locale} label={dict.common.breadcrumb} />
+          <main id="contenu" className="flex-1">
+            {children}
+          </main>
+          <Footer locale={locale} dict={dict} populated={populated} />
+        </LiquefyRoot>
       </body>
     </html>
   );

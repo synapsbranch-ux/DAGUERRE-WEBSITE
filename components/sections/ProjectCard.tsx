@@ -1,6 +1,17 @@
+import { ArrowUpRight } from "lucide-react";
 import Link from "next/link";
-import Image from "next/image";
 
+import {
+  CutoutCard,
+  CutoutCardContent,
+  CutoutCardFooter,
+  CutoutCardImage,
+  CutoutCardInsetLabel,
+  CutoutCardMedia,
+  CutoutCardOverlay,
+  cutoutCardSurfaceClassName,
+  CutoutCorner,
+} from "@/components/cult/cutout-card";
 import { Badge } from "@/components/ui/badge";
 import type { Locale } from "@/lib/i18n";
 import { isUnconfiguredRemoteImage, resolveKnownImageSource } from "@/lib/media/assets";
@@ -10,60 +21,81 @@ import type { Project } from "@/lib/types";
 type ProjectCardProps = {
   project: Project;
   locale: Locale;
+  /** Taille de rendu déclarée à `next/image`. */
+  sizes?: string;
 };
 
 /**
- * Carte de réalisation, reprise de la maquette : visuel en haut séparé par un
- * filet, sur-titre laiton, titre sérif, une ligne de contexte, puis les
- * technologies. Fond transparent, bordure de 1 px — jamais d'ombre portée.
+ * Carte de réalisation — Cult UI « Cutout Card ».
+ *
+ * La découpe d'angle, le survol et l'apparition en cascade viennent du
+ * composant ; le contenu vient entièrement du CMS. L'année et la première
+ * catégorie occupent l'étiquette encastrée, les technologies la barre basse.
+ *
+ * La carte entière est un lien : `CutoutCard` ne rend qu'un `div`, il est donc
+ * enveloppé plutôt que transformé — le survol continue de fonctionner et la
+ * cible reste unique pour le clavier.
  */
-export function ProjectCard({ project, locale }: ProjectCardProps) {
+export function ProjectCard({ project, locale, sizes = "(max-width: 640px) 100vw, (max-width: 1024px) 50vw, 33vw" }: ProjectCardProps) {
   const url = href("projects", locale, project.slug);
   const image = project.image ? resolveKnownImageSource(project.image) : null;
+  const label = project.kicker || project.categories[0];
 
   return (
-    <article className="group flex h-full flex-col overflow-hidden rounded-2xl border border-border bg-white/55 shadow-[0_12px_40px_rgb(7_19_33_/_0.05)] transition-[transform,border-color,box-shadow] hover:-translate-y-1 hover:border-[var(--copper)]/45 hover:shadow-[0_20px_55px_rgb(7_19_33_/_0.10)]">
-      {image ? (
-        <div className="relative aspect-[4/3] overflow-hidden border-b border-border bg-[var(--navy-850)]">
-          <Image
-            src={image}
-            alt={project.title}
-            fill
-            sizes="(max-width: 640px) 100vw, (max-width: 1024px) 50vw, 33vw"
-            quality={75}
-            unoptimized={isUnconfiguredRemoteImage(image)}
-            className="image-zoom object-cover"
-          />
-        </div>
-      ) : null}
+    <Link
+      href={url}
+      className="group block h-full rounded-[24px] focus-visible:outline-2 focus-visible:outline-offset-4 focus-visible:outline-[var(--copper)]"
+    >
+      <CutoutCard className={`${cutoutCardSurfaceClassName} h-full`}>
+        {image ? (
+          <CutoutCardMedia className="h-56">
+            <CutoutCardImage
+              alt=""
+              src={image}
+              sizes={sizes}
+              unoptimized={isUnconfiguredRemoteImage(image)}
+            />
+            <CutoutCardOverlay />
+            {label ? (
+              <CutoutCardInsetLabel className="bottom-0 left-0 rounded-tr-[20px] bg-card px-5 py-3">
+                <span className="text-[11px] font-semibold uppercase tracking-widest text-[var(--copper-deep)]">
+                  {label}
+                </span>
+                <CutoutCorner className="absolute -bottom-px -right-[31px] rotate-90 text-card" />
+                <CutoutCorner className="absolute -left-px -top-[31px] rotate-90 text-card" />
+              </CutoutCardInsetLabel>
+            ) : null}
+          </CutoutCardMedia>
+        ) : null}
 
-      <div className="flex flex-1 flex-col gap-3 px-6 py-6">
-        {project.categories.length > 0 ? (
-          <p className="text-[10px] uppercase tracking-[0.1em] text-primary">
-            {project.categories.join(" · ")}
+        <CutoutCardContent>
+          <p className="mb-2 font-mono text-[11px] uppercase tracking-[0.16em] text-muted-foreground">
+            {project.year}
           </p>
-        ) : null}
-
-        <h3 className="text-xl leading-tight">
-          <Link href={url} className="transition-colors hover:text-primary">
+          <h3 className="mb-2 text-balance font-heading text-xl leading-snug tracking-[-0.02em]">
             {project.title}
-          </Link>
-        </h3>
+          </h3>
+          {project.summary ? (
+            <p className="mb-4 text-pretty text-sm leading-relaxed text-muted-foreground">
+              {project.summary}
+            </p>
+          ) : null}
 
-        <p className="flex-1 text-[13.5px] leading-relaxed text-muted-foreground">
-          {project.summary}
-        </p>
-
-        {project.technologies.length > 0 ? (
-          <ul className="mt-1 flex flex-wrap gap-1.5">
-            {project.technologies.map((tech, index) => (
-              <li key={tech}>
-                <Badge variant={index === 0 ? "outline" : "secondary"}>{tech}</Badge>
-              </li>
-            ))}
-          </ul>
-        ) : null}
-      </div>
-    </article>
+          <CutoutCardFooter className="border-t border-border/80 pt-4">
+            <ul className="flex flex-wrap gap-1.5">
+              {project.technologies.slice(0, 3).map((technology) => (
+                <li key={technology}>
+                  <Badge variant="outline">{technology}</Badge>
+                </li>
+              ))}
+            </ul>
+            <ArrowUpRight
+              aria-hidden="true"
+              className="ml-auto size-4 shrink-0 text-[var(--copper-deep)] transition-transform group-hover:-translate-y-0.5 group-hover:translate-x-0.5"
+            />
+          </CutoutCardFooter>
+        </CutoutCardContent>
+      </CutoutCard>
+    </Link>
   );
 }

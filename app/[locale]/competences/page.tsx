@@ -1,7 +1,9 @@
 import type { Metadata } from "next";
 
 import { ContactCTA } from "@/components/sections/ContactCTA";
+import { SkillsExplorer } from "@/components/sections/SkillsExplorer";
 import { Container } from "@/components/ui/Container";
+import { Empty, EmptyDescription, EmptyHeader, EmptyTitle } from "@/components/ui/empty";
 import { PageHeader } from "@/components/ui/PageHeader";
 import { Section } from "@/components/ui/Section";
 import { getDictionary, getDictionaryFor, getLocale } from "@/lib/dictionaries";
@@ -27,8 +29,13 @@ export async function generateMetadata({
 }
 
 /**
- * Catégories de compétences. Les intitulés sont des noms d'outils et de
- * disciplines : ils ne se traduisent pas.
+ * Compétences.
+ *
+ * Ruixen UI « Magnetic Tabs » pour les catégories et « Tag Cloud Select »
+ * pour l'exploration : choisir une compétence dans le nuage réduit les
+ * onglets aux groupes qui la contiennent. Aucun pourcentage ni note de
+ * maîtrise — seules les compétences mises en avant au CMS (`featured`)
+ * ressortent, comme pastille plus grande dans le nuage.
  */
 export default async function CompetencesPage() {
   const [locale, dict, skillGroups] = await Promise.all([getLocale(), getDictionary(), getSkills()]);
@@ -39,34 +46,23 @@ export default async function CompetencesPage() {
       <PageHeader eyebrow={page.eyebrow} title={page.title} description={page.description} />
 
       <Section title={page.categories}>
-        {skillGroups.length ? <ul className="grid gap-px border border-border bg-border sm:grid-cols-2">
-          {skillGroups.map((group) => (
-            <li
-              key={group.slug}
-              id={group.slug}
-              className="scroll-mt-24 bg-background p-6"
-            >
-              <h3 className="font-heading text-lg">{group.name}</h3>
-              {group.description ? (
-                <p className="mt-1.5 text-sm leading-6 text-muted-foreground">{group.description}</p>
-              ) : null}
-              <ul className="mt-3 flex flex-wrap gap-2 text-sm text-muted-foreground">
-                  {group.skills.map((skill) => (
-                    <li
-                      key={skill.name}
-                      className={
-                        skill.featured
-                          ? "rounded-sm bg-[var(--copper-wash)] px-3 py-1 font-semibold text-foreground"
-                          : "rounded-sm bg-foreground/6 px-3 py-1"
-                      }
-                    >
-                      {skill.name}
-                    </li>
-                  ))}
-                </ul>
-            </li>
-          ))}
-        </ul> : <p className="rounded-md border border-border p-6 text-muted-foreground">{dict.common.empty}</p>}
+        {skillGroups.length > 0 ? (
+          <SkillsExplorer
+            groups={skillGroups}
+            labels={{
+              explore: page.explore,
+              explorePlaceholder: page.explorePlaceholder,
+              categories: page.categories,
+            }}
+          />
+        ) : (
+          <Empty>
+            <EmptyHeader>
+              <EmptyTitle>{dict.common.empty}</EmptyTitle>
+              <EmptyDescription>{page.description}</EmptyDescription>
+            </EmptyHeader>
+          </Empty>
+        )}
       </Section>
 
       <ContactCTA locale={locale} dict={dict} />

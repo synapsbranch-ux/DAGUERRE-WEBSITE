@@ -1,93 +1,159 @@
 "use client";
+
 import { useState } from "react";
-import { Button } from "@/components/ui/button";
-import { Input } from "@/components/ui/input";
-import { Label } from "@/components/ui/label";
-import { Textarea } from "@/components/ui/textarea";
+
+import { LiquidButton } from "@liquefy-ui/react";
+import {
+  FormField,
+  FormGroup,
+  FormSegment,
+  FormTextArea,
+  GlassForm,
+} from "@/components/ruixen/glass-form";
 import type { Dictionary } from "@/lib/dictionaries";
 
 type ContactFormProps = {
   dict: Dictionary;
 };
 
+type Subject = "mandat" | "emploi" | "autre";
+
+type FormState = {
+  name: string;
+  organisation: string;
+  email: string;
+  subject: Subject;
+  message: string;
+  /** Piège à pourriel : un visiteur ne le remplit jamais. */
+  website: string;
+};
+
+const initialState: FormState = {
+  name: "",
+  organisation: "",
+  email: "",
+  subject: "mandat",
+  message: "",
+  website: "",
+};
+
 /**
- * Formulaire de contact, repris de la maquette : bloc encadré d'un filet,
- * champs sur deux colonnes, contrôle segmenté pour l'objet.
+ * Formulaire de contact — Ruixen UI « Glass Form » pour les champs, bouton
+ * d'envoi en verre liquide Liquefy.
  *
- * Le contrôle segmenté est en CSS pur (`has-[:checked]`), comme dans la
- * maquette : des `<input type="radio">` masqués, l'état visuel porté par le
- * `<label>`. Aucun JavaScript, donc le composant reste côté serveur.
- *
- * L'action d'envoi est branchée en même temps que la collection des messages.
+ * `Glass Form` est entièrement contrôlé (pas d'attribut `name`, donc pas de
+ * `FormData` native) : l'état de chaque champ vit ici, et c'est cet état —
+ * pas une lecture du DOM — qui construit le message envoyé à `/api/contact`.
+ * La validation (`required`, `type="email"`), le piège à pourriel caché et
+ * les quatre états (repos, envoi, envoyé, erreur) sont ceux du formulaire
+ * d'origine, seule la présentation change.
  */
 export function ContactForm({ dict }: ContactFormProps) {
   const page = dict.pages.contact;
+  const [values, setValues] = useState<FormState>(initialState);
   const [state, setState] = useState<"idle" | "sending" | "sent" | "error">("idle");
 
-  const subjects = [
+  const subjects: { value: Subject; label: string }[] = [
     { value: "mandat", label: page.subjectMandate },
     { value: "emploi", label: page.subjectJob },
     { value: "autre", label: page.subjectOther },
   ];
 
+  const set = <K extends keyof FormState>(key: K) => (value: string) =>
+    setValues((current) => ({ ...current, [key]: value as FormState[K] }));
+
+  async function handleSubmit() {
+    setState("sending");
+    try {
+      const response = await fetch("/api/contact", {
+        method: "POST",
+        headers: { "content-type": "application/json" },
+        body: JSON.stringify(values),
+      });
+      if (response.ok) {
+        setState("sent");
+        setValues(initialState);
+      } else {
+        setState("error");
+      }
+    } catch {
+      setState("error");
+    }
+  }
+
   return (
-    <form className="flex h-fit flex-col gap-4 rounded-md border border-border p-7" onSubmit={async (event) => { event.preventDefault(); setState("sending"); const form = new FormData(event.currentTarget); const response = await fetch("/api/contact", { method: "POST", headers: { "content-type": "application/json" }, body: JSON.stringify(Object.fromEntries(form)) }); setState(response.ok ? "sent" : "error"); if (response.ok) event.currentTarget.reset(); }}>
-      <div className="hidden" aria-hidden="true"><Label htmlFor="website">Website</Label><Input id="website" name="website" tabIndex={-1} autoComplete="off" /></div>
-      <div className="grid gap-4 sm:grid-cols-2">
-        <div className="grid gap-1.5">
-          <Label htmlFor="name">{page.name}</Label>
-          <Input id="name" name="name" autoComplete="name" required />
-        </div>
-        <div className="grid gap-1.5">
-          <Label htmlFor="organisation">{page.organisation}</Label>
-          <Input id="organisation" name="organisation" placeholder={page.optional} />
-        </div>
-      </div>
-
-      <div className="grid gap-1.5">
-        <Label htmlFor="email">{page.email}</Label>
-        <Input id="email" name="email" type="email" autoComplete="email" required />
-      </div>
-
-      <fieldset className="grid gap-1.5">
-        <legend className="mb-1.5 text-xs text-muted-foreground">{page.subject}</legend>
-        <div className="flex overflow-hidden rounded-md border border-border">
-          {subjects.map((subject, index) => (
-            <label
-              key={subject.value}
-              className={`flex flex-1 cursor-pointer items-center justify-center py-2 text-sm transition-colors has-[:checked]:text-primary has-[:checked]:shadow-[inset_0_0_0_1px_var(--primary)] not-has-[:checked]:hover:bg-foreground/7 ${
-                index > 0 ? "border-l border-border" : ""
-              }`}
-            >
-              <input
-                type="radio"
-                name="subject"
-                value={subject.value}
-                defaultChecked={index === 0}
-                className="sr-only"
-              />
-              {subject.label}
-            </label>
-          ))}
-        </div>
-      </fieldset>
-
-      <div className="grid gap-1.5">
-        <Label htmlFor="message">{page.message}</Label>
-        <Textarea
-          id="message"
-          name="message"
-          rows={6}
-          placeholder={page.messagePlaceholder}
-          required
+    <GlassForm onSubmit={handleSubmit} style={{ maxWidth: "none" }}>
+      {/* Piège à pourriel : masqué visuellement, hors du tabulateur, jamais rempli par une personne. */}
+      <div className="sr-only" aria-hidden="true">
+        <label htmlFor="website">Website</label>
+        <input
+          id="website"
+          tabIndex={-1}
+          autoComplete="off"
+          value={values.website}
+          onChange={(event) => set("website")(event.target.value)}
         />
       </div>
 
-      {state === "sent" ? <p role="status" className="text-sm text-[var(--brass-deep)]">{page.sent}</p> : null}
-      {state === "error" ? <p role="alert" className="text-sm text-destructive">{page.error}</p> : null}
-      <Button type="submit" size="block" disabled={state === "sending"} className="mt-1">
-        {state === "sending" ? "…" : page.send}
-      </Button>
-    </form>
+      <FormGroup>
+        <FormField
+          label={page.name}
+          value={values.name}
+          onChange={set("name")}
+          required
+          autoComplete="name"
+        />
+        <FormField
+          label={page.organisation}
+          value={values.organisation}
+          onChange={set("organisation")}
+          placeholder={page.optional}
+          autoComplete="organization"
+        />
+        <FormField
+          label={page.email}
+          type="email"
+          value={values.email}
+          onChange={set("email")}
+          required
+          autoComplete="email"
+        />
+      </FormGroup>
+
+      <FormGroup>
+        <FormSegment
+          label={page.subject}
+          options={subjects}
+          value={values.subject}
+          onChange={(value) => set("subject")(value)}
+        />
+      </FormGroup>
+
+      <FormGroup>
+        <FormTextArea
+          label={page.message}
+          value={values.message}
+          onChange={set("message")}
+          placeholder={page.messagePlaceholder}
+          rows={6}
+          required
+        />
+      </FormGroup>
+
+      {state === "sent" ? (
+        <p role="status" className="text-sm text-[var(--brass-deep)]">
+          {page.sent}
+        </p>
+      ) : null}
+      {state === "error" ? (
+        <p role="alert" className="text-sm text-destructive">
+          {page.error}
+        </p>
+      ) : null}
+
+      <LiquidButton type="submit" isLoading={state === "sending"} style={{ width: "100%" }}>
+        {page.send}
+      </LiquidButton>
+    </GlassForm>
   );
 }

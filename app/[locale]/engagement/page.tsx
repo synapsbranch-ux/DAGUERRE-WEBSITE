@@ -1,16 +1,17 @@
 import type { Metadata } from "next";
 
+import { ContactCTA } from "@/components/sections/ContactCTA";
 import {
   EditorialBody,
   EditorialEmpty,
-  EditorialGallery,
   EditorialHeader,
   EditorialItems,
   EditorialSections,
 } from "@/components/sections/EditorialPages";
+import { EngagementGallery } from "@/components/sections/EngagementGallery";
 import { Container } from "@/components/ui/Container";
 import { getPage } from "@/lib/content";
-import { getDictionary, getDictionaryFor } from "@/lib/dictionaries";
+import { getDictionary, getDictionaryFor, getLocale } from "@/lib/dictionaries";
 import { isLocale } from "@/lib/i18n";
 import { createMetadata } from "@/lib/seo";
 
@@ -35,9 +36,16 @@ export async function generateMetadata({
   });
 }
 
-/** Engagement : contenu, initiatives, valeurs et médias, tous issus du CMS. */
+/**
+ * Engagement : mission, initiatives, valeurs, récit photographique et appel
+ * à l'action — tout issu du CMS.
+ *
+ * Le récit photographique passe par Ruixen UI « Scroll Image Tunnel »
+ * (`EngagementGallery`) plutôt que la grille éditoriale partagée : c'est la
+ * seule page où la mégaconsigne demande spécifiquement ce traitement.
+ */
 export default async function EngagementPage() {
-  const [dict, page] = await Promise.all([getDictionary(), getPage("engagement")]);
+  const [locale, dict, page] = await Promise.all([getLocale(), getDictionary(), getPage("engagement")]);
   const labels = dict.pages.engagement;
 
   if (!page) {
@@ -64,7 +72,10 @@ export default async function EngagementPage() {
 
       <EditorialItems title={labels.sections.initiatives} items={page.items} />
       <EditorialSections sections={page.sections} />
-      <EditorialGallery title={dict.pages.editorial.gallery} images={page.media} />
+
+      <EngagementGallery images={page.media} hint={labels.galleryHint} />
+
+      <ContactCTA locale={locale} dict={dict} />
     </Container>
   );
 }

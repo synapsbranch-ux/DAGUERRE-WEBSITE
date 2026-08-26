@@ -13,9 +13,14 @@
     "images:compress": "node scripts/compress-images.mjs"
   },
   "dependencies": {
+    "@gsap/react": "^2.1.2",
+    "@liquefy-ui/react": "^0.2.0",
+    "@radix-ui/react-use-controllable-state": "^1.2.6",
     "better-auth": "^1.7.1",
     "class-variance-authority": "^0.7.1",
     "clsx": "^2.1.1",
+    "dither-plugin": "^1.1.1",
+    "gsap": "^3.15.0",
     "lucide-react": "^1.33.0",
     "mongodb": "^7.5.0",
     "mongoose": "^9.9.3",
@@ -26,6 +31,7 @@
     "react": "19.2.8",
     "react-dom": "19.2.8",
     "react-markdown": "^10.1.0",
+    "react-use-measure": "^2.1.7",
     "remark-gfm": "^4.0.1",
     "shadcn": "^4.19.0",
     "sonner": "^2.0.8",

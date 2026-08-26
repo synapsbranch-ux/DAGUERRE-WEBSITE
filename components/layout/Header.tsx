@@ -1,54 +1,120 @@
-import { ArrowUpRight } from "lucide-react";
-import Link from "next/link";
+import { ArrowUpRight, Briefcase, Building2, Layers, Newspaper, UserRound } from "lucide-react";
 
 import { LocaleSwitcher } from "@/components/layout/LocaleSwitcher";
-import { MobileNav } from "@/components/layout/MobileNav";
-import { Navigation } from "@/components/layout/Navigation";
-import { Button } from "@/components/ui/button";
-import { Container } from "@/components/ui/Container";
+import { MobileNav, type MobileNavSection } from "@/components/layout/MobileNav";
+import { SiteNav } from "@/components/layout/SiteNav";
+import { legalNavKeys, secondaryNavKeys } from "@/components/layout/Navigation";
+import { LiquidCtaLink } from "@/components/liquefy/LiquidCtaLink";
+import NavbarFloating from "@/components/ruixen/navbar-floating";
 import type { Dictionary } from "@/lib/dictionaries";
 import type { Locale } from "@/lib/i18n";
-import { href } from "@/lib/routes";
+import { href, routes, type RouteKey } from "@/lib/routes";
 import { siteConfig } from "@/lib/site";
 
 type HeaderProps = {
   locale: Locale;
   dict: Dictionary;
+  /**
+   * Routes réellement alimentées. Une rubrique vide n'est pas retirée du site
+   * — elle reste accessible et indexée — mais elle n'est pas mise en avant
+   * dans la navigation principale.
+   */
+  populated: Partial<Record<RouteKey, boolean>>;
 };
 
-export function Header({ locale, dict }: HeaderProps) {
+/** Rubriques candidates à la barre principale, dans l'ordre du récit. */
+const primaryKeys: RouteKey[] = ["about", "projects", "datakle", "services", "blog"];
+
+/** Un repère visuel par rubrique — la barre à bascule les affiche à côté du libellé. */
+const primaryIcons: Partial<Record<RouteKey, React.ReactNode>> = {
+  about: <UserRound aria-hidden="true" className="size-[15px]" />,
+  projects: <Briefcase aria-hidden="true" className="size-[15px]" />,
+  datakle: <Building2 aria-hidden="true" className="size-[15px]" />,
+  services: <Layers aria-hidden="true" className="size-[15px]" />,
+  blog: <Newspaper aria-hidden="true" className="size-[15px]" />,
+};
+
+/**
+ * En-tête du site — Ruixen UI « Navbar Floating » comme structure (pilule
+ * détachée du bord, plutôt que la barre pleine largeur de « Navbar Split »),
+ * avec la barre à bascule « Hover Gradient NavBar » en navigation — chaque
+ * entrée porte désormais une icône Lucide — et l'appel à l'action en verre
+ * liquide (Liquefy).
+ *
+ * Le composant reste un composant serveur : seuls la navigation (qui lit le
+ * chemin courant), le sélecteur de langue et le menu mobile sont clients.
+ */
+export function Header({ locale, dict, populated }: HeaderProps) {
+  const visible = (key: RouteKey) => populated[key] !== false;
+  const navKeys = primaryKeys.filter(visible);
+
+  const items = navKeys.map((key) => ({
+    label: routes[key].label[locale],
+    href: href(key, locale),
+    icon: primaryIcons[key],
+  }));
+
+  const mobileSections: MobileNavSection[] = [
+    {
+      items: [
+        { label: routes.home.label[locale], href: href("home", locale) },
+        ...items,
+      ],
+    },
+    {
+      title: dict.footer.resources,
+      items: secondaryNavKeys
+        .filter(visible)
+        .map((key) => ({ label: routes[key].label[locale], href: href(key, locale) })),
+    },
+    {
+      title: dict.footer.legal,
+      items: legalNavKeys.map((key) => ({ label: routes[key].label[locale], href: href(key, locale) })),
+    },
+  ].filter((section) => section.items.length > 0);
+
   return (
-    <header className="sticky top-0 z-40 border-b border-white/10 bg-[var(--navy-950)]/94 text-white shadow-[0_8px_30px_rgb(0_0_0_/_0.08)] backdrop-blur-xl">
-      <Container>
-        <div className="flex h-[72px] items-center gap-6">
-          <Link
-            href={href("home", locale)}
-            className="mr-auto flex items-center gap-3 focus-visible:rounded-sm focus-visible:outline-2 focus-visible:outline-offset-4 focus-visible:outline-[var(--copper-soft)]"
-          >
-            <span className="grid size-9 place-items-center rounded-full border border-[var(--copper)]/55 bg-[var(--copper)]/10 font-heading text-sm font-bold text-[var(--copper-soft)]">D</span>
+    <>
+      {/* Mobile : la carte dépliable tient lieu de barre, en `fixed`. */}
+      <MobileNav locale={locale} dict={dict} brandName={siteConfig.name} sections={mobileSections} />
+      <div className="h-[72px] xl:hidden" aria-hidden="true" />
+
+      <NavbarFloating
+        className="sticky top-0 z-40 hidden px-5 pt-5 pb-3 sm:px-10 xl:block xl:px-[70px]"
+        innerClassName="h-[68px] max-w-[1300px] border-white/10 bg-[var(--navy-950)]/94 px-6 text-white shadow-[0_8px_30px_rgb(0_0_0_/_0.16)] backdrop-blur-xl xl:px-9"
+        logoHref={href("home", locale)}
+        logo={
+          <span className="flex items-center gap-3">
+            <span className="grid size-9 place-items-center rounded-full border border-[var(--copper)]/55 bg-[var(--copper)]/10 font-heading text-sm font-bold text-[var(--copper-soft)]">
+              D
+            </span>
             <span>
-              <span className="block font-heading text-[18px] font-semibold tracking-[-.03em]">{siteConfig.name}</span>
-              <span className="hidden text-[9px] font-semibold uppercase tracking-[.16em] text-white/50 sm:block">
+              <span className="block font-heading text-[18px] font-semibold tracking-[-.03em]">
+                {siteConfig.name}
+              </span>
+              <span className="block text-[9px] font-semibold uppercase tracking-[.16em] text-white/50">
                 {siteConfig.baseline[locale]}
               </span>
             </span>
-          </Link>
-
-          <nav aria-label={dict.common.mainNav} className="hidden lg:block">
-            <Navigation locale={locale} orientation="horizontal" />
-          </nav>
-
-          <div className="flex items-center gap-2.5">
-            <LocaleSwitcher locale={locale} label={dict.common.language} className="border-white/18 bg-white/5 text-white" />
-            <Button asChild size="sm" className="hidden sm:inline-flex">
-              <Link href={href("contact", locale)}>
-                {dict.common.contactCta} <ArrowUpRight aria-hidden="true" />
-              </Link>
-            </Button>
-            <MobileNav locale={locale} dict={dict} />
-          </div>
-        </div>
-      </Container>
-    </header>
+          </span>
+        }
+        navSlot={<SiteNav items={items} label={dict.common.mainNav} />}
+        trailing={
+          <>
+            <LocaleSwitcher
+              locale={locale}
+              label={dict.common.language}
+              className="border-white/18 bg-white/5 text-white"
+            />
+            <LiquidCtaLink
+              href={href("contact", locale)}
+              iconAfter={<ArrowUpRight aria-hidden="true" className="size-4" />}
+            >
+              {dict.common.contactCta}
+            </LiquidCtaLink>
+          </>
+        }
+      />
+    </>
   );
 }

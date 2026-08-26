@@ -61,6 +61,8 @@ export const en = {
       secondaryCta: "Explore services",
       tertiaryCta: "View selected work",
       portraitAlt: "Jacques-Daguerre in a data analytics environment",
+      /* Mots égrenés par le rideau d'ouverture (Ruixen « Arc Reveal Hero »). */
+      greetings: ["Data.", "Method.", "Decision."],
     },
     proof: {
       label: "Expertise on demand",
@@ -70,6 +72,15 @@ export const en = {
       eyebrow: "From problem to action",
       title: "Your data already exists. Its value still needs structure.",
       lead: "Manual reporting, conflicting metrics and scattered information slow teams down. A sound analytics process gives every decision a shared foundation.",
+      /* Chaîne de traitement affichée par le panneau Ruixen. */
+      pipeline: [
+        { label: "Raw data", detail: "Files, exports and manual entries, exactly as they arrive." },
+        { label: "Cleaning", detail: "Duplicates, missing values and formats put back in order." },
+        { label: "Structuring", detail: "One shared model, one set of agreed definitions." },
+        { label: "Modelling", detail: "Calculation rules and indicators, written once." },
+        { label: "Analysis", detail: "Reading the gaps, the trends and what causes them." },
+        { label: "Decision", detail: "A documented call, then a measure of its effect." },
+      ],
       steps: [
         { label: "Understand", detail: "Clarify the question, the users and the decisions to support." },
         { label: "Structure", detail: "Make sources, calculation rules and indicators reliable." },
@@ -204,6 +215,10 @@ export const en = {
           client: "Client",
           role: "Role",
           lien: "View the project",
+          related: "Related work",
+          previous: "Previous project",
+          next: "Next project",
+          pagination: "Project navigation",
         },
       },
     },
@@ -303,6 +318,7 @@ export const en = {
         initiatives: "Community initiatives",
         valeurs: "Human values",
       },
+      galleryHint: "Scroll to see the work on the ground",
     },
 
     cv: {
@@ -349,6 +365,8 @@ export const en = {
         "Data analytics, business intelligence, visualisation, Excel/VBA, SQL, Python, project management, monitoring and evaluation, research and strategy.",
       categories: "Categories",
       todo: "Details will be added to this entry.",
+      explore: "Explore by skill",
+      explorePlaceholder: "Pick skills…",
     },
 
     contact: {

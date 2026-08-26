@@ -1,12 +1,12 @@
 import type { Metadata } from "next";
-import Link from "next/link";
 
+import { toServiceEntry } from "@/components/sections/DataklePreview";
 import { ContactCTA } from "@/components/sections/ContactCTA";
+import { ServiceLedger } from "@/components/ruixen/service-ledger";
 import { JsonLd } from "@/components/seo/JsonLd";
-import { Badge } from "@/components/ui/badge";
 import { Container } from "@/components/ui/Container";
+import { Empty, EmptyDescription, EmptyHeader, EmptyTitle } from "@/components/ui/empty";
 import { PageHeader } from "@/components/ui/PageHeader";
-import { Section } from "@/components/ui/Section";
 import { getServices } from "@/lib/content";
 import { getDictionary, getDictionaryFor, getLocale } from "@/lib/dictionaries";
 import { isLocale } from "@/lib/i18n";
@@ -31,7 +31,14 @@ export async function generateMetadata({
   });
 }
 
-/** Catalogue des services publiés, ordonné par le champ `order` du CMS. */
+/**
+ * Catalogue des services publiés.
+ *
+ * Ruixen UI « Service Ledger », le même composant qui déroule les services
+ * sur l'accueil et sur la page Datakle : la bande à onglets suit la lecture
+ * et chaque service développe son résumé et ses livrables. Sans service
+ * publié, un état vide de registre — jamais un cadre cassé.
+ */
 export default async function DatakleServicesPage() {
   const [locale, dict, services] = await Promise.all([
     getLocale(),
@@ -54,47 +61,23 @@ export default async function DatakleServicesPage() {
       <PageHeader eyebrow={page.eyebrow} title={page.title} description={page.description} />
 
       <div className="divide-y divide-border">
-        <Section title={page.catalogue} description={page.catalogueHint}>
-          {services.length > 0 ? (
-            <ul className="grid gap-4 sm:grid-cols-2">
-              {services.map((service) => (
-                <li key={service.slug}>
-                  <article className="flex h-full flex-col rounded-2xl border border-border bg-white/45 p-6 transition-colors hover:border-[var(--copper)]/55">
-                    <div className="flex items-start gap-2">
-                      <h3 className="flex-1 text-xl">
-                        <Link
-                          href={href("services", locale, service.slug)}
-                          className="transition-colors hover:text-primary"
-                        >
-                          {service.title}
-                        </Link>
-                      </h3>
-                      {service.featured ? <Badge variant="secondary">★</Badge> : null}
-                    </div>
-
-                    {service.summary ? (
-                      <p className="mt-2 flex-1 text-sm leading-6 text-muted-foreground">
-                        {service.summary}
-                      </p>
-                    ) : null}
-
-                    {service.deliverables.length > 0 ? (
-                      <ul className="mt-4 flex flex-wrap gap-1.5">
-                        {service.deliverables.slice(0, 4).map((deliverable) => (
-                          <li key={deliverable}>
-                            <Badge variant="outline">{deliverable}</Badge>
-                          </li>
-                        ))}
-                      </ul>
-                    ) : null}
-                  </article>
-                </li>
-              ))}
-            </ul>
-          ) : (
-            <p className="text-sm text-muted-foreground">{page.empty}</p>
-          )}
-        </Section>
+        {services.length > 0 ? (
+          <ServiceLedger
+            title={page.catalogue}
+            description={page.catalogueHint}
+            entries={services.map((service, index) => toServiceEntry(service, index, locale))}
+            navLabel={page.catalogue}
+          />
+        ) : (
+          <div className="py-14">
+            <Empty>
+              <EmptyHeader>
+                <EmptyTitle>{page.empty}</EmptyTitle>
+                <EmptyDescription>{page.catalogueHint}</EmptyDescription>
+              </EmptyHeader>
+            </Empty>
+          </div>
+        )}
 
         <ContactCTA locale={locale} dict={dict} />
       </div>

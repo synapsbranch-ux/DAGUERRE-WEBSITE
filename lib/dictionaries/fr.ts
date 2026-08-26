@@ -67,6 +67,8 @@ export const fr = {
       secondaryCta: "Découvrir les services",
       tertiaryCta: "Voir les réalisations",
       portraitAlt: "Jacques-Daguerre dans un environnement analytique",
+      /* Mots égrenés par le rideau d'ouverture (Ruixen « Arc Reveal Hero »). */
+      greetings: ["Données.", "Méthode.", "Décision."],
     },
     proof: {
       label: "Expertise mobilisable",
@@ -76,6 +78,15 @@ export const fr = {
       eyebrow: "Du problème à l’action",
       title: "Vos données existent déjà. Leur valeur reste à organiser.",
       lead: "Rapports manuels, indicateurs contradictoires ou informations dispersées ralentissent les équipes. Une démarche analytique solide remet chaque décision sur une base partagée.",
+      /* Chaîne de traitement affichée par le panneau Ruixen. */
+      pipeline: [
+        { label: "Données brutes", detail: "Fichiers, exports et saisies, tels qu'ils arrivent." },
+        { label: "Nettoyage", detail: "Doublons, valeurs manquantes et formats remis d'aplomb." },
+        { label: "Structuration", detail: "Un modèle commun, des définitions partagées." },
+        { label: "Modélisation", detail: "Règles de calcul et indicateurs, écrits une seule fois." },
+        { label: "Analyse", detail: "Lecture des écarts, des tendances et de leurs causes." },
+        { label: "Décision", detail: "Un arbitrage documenté, puis la mesure de son effet." },
+      ],
       steps: [
         { label: "Comprendre", detail: "Clarifier la question, les usages et les décisions à soutenir." },
         { label: "Structurer", detail: "Fiabiliser les sources, les règles de calcul et les indicateurs." },
@@ -216,6 +227,10 @@ export const fr = {
           client: "Client",
           role: "Rôle",
           lien: "Voir le projet",
+          related: "Réalisations liées",
+          previous: "Réalisation précédente",
+          next: "Réalisation suivante",
+          pagination: "Navigation entre réalisations",
         },
       },
     },
@@ -317,6 +332,7 @@ export const fr = {
         initiatives: "Initiatives communautaires",
         valeurs: "Valeurs humaines",
       },
+      galleryHint: "Faites défiler pour voir le terrain",
     },
 
     cv: {
@@ -364,6 +380,8 @@ export const fr = {
         "Data analytics, business intelligence, visualisation, Excel/VBA, SQL, Python, gestion de projet, suivi-évaluation, recherche et stratégie.",
       categories: "Catégories",
       todo: "Les détails seront ajoutés à cette entrée.",
+      explore: "Explorer par compétence",
+      explorePlaceholder: "Choisir des compétences…",
     },
 
     contact: {

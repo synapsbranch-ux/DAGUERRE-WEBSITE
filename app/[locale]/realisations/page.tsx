@@ -2,8 +2,10 @@ import type { Metadata } from "next";
 import Link from "next/link";
 
 import { ProjectCard } from "@/components/sections/ProjectCard";
+import { ProjectShowcase } from "@/components/sections/ProjectShowcase";
 import { JsonLd } from "@/components/seo/JsonLd";
 import { Container } from "@/components/ui/Container";
+import { Empty, EmptyDescription, EmptyHeader, EmptyTitle } from "@/components/ui/empty";
 import { PageHeader } from "@/components/ui/PageHeader";
 import { Pagination } from "@/components/ui/Pagination";
 import { Section } from "@/components/ui/Section";
@@ -88,6 +90,9 @@ export default async function RealisationsPage({
 
       <PageHeader eyebrow={labels.eyebrow} title={labels.title} description={labels.description} />
 
+      {/* Ouverture visuelle : seulement sur la vue complète, non filtrée. */}
+      {!filtered && page === 1 ? <ProjectShowcase projects={featured.length ? featured : results.items} /> : null}
+
       <div className="divide-y divide-border">
         {facets.categories.length > 0 || facets.technologies.length > 0 || facets.years.length > 0 ? (
           <Section title={labels.filters} description={labels.filtersHint}>
@@ -140,7 +145,11 @@ export default async function RealisationsPage({
                 ))}
               </ul>
             ) : (
-              <p className="text-sm text-muted-foreground">{labels.emptyFeatured}</p>
+              <Empty>
+                <EmptyHeader>
+                  <EmptyTitle>{labels.emptyFeatured}</EmptyTitle>
+                </EmptyHeader>
+              </Empty>
             )}
           </Section>
         ) : null}
@@ -167,7 +176,12 @@ export default async function RealisationsPage({
               />
             </>
           ) : (
-            <p className="text-sm text-muted-foreground">{labels.empty}</p>
+            <Empty>
+              <EmptyHeader>
+                <EmptyTitle>{labels.empty}</EmptyTitle>
+                <EmptyDescription>{labels.allHint}</EmptyDescription>
+              </EmptyHeader>
+            </Empty>
           )}
         </Section>
       </div>

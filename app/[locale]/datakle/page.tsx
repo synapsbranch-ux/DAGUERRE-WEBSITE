@@ -1,6 +1,8 @@
 import type { Metadata } from "next";
 import Link from "next/link";
 
+import { LiquidCtaLink } from "@/components/liquefy/LiquidCtaLink";
+import { toServiceEntry } from "@/components/sections/DataklePreview";
 import {
   EditorialBody,
   EditorialEmpty,
@@ -8,6 +10,8 @@ import {
   EditorialItems,
   EditorialSections,
 } from "@/components/sections/EditorialPages";
+import { ServiceShowcase } from "@/components/sections/ServiceShowcase";
+import { ServiceLedger } from "@/components/ruixen/service-ledger";
 import { JsonLd } from "@/components/seo/JsonLd";
 import { Button } from "@/components/ui/button";
 import { Container } from "@/components/ui/Container";
@@ -36,7 +40,11 @@ export async function generateMetadata({
   });
 }
 
-/** Page Datakle : mission, vision, valeurs, sections illustrées et services publiés. */
+/**
+ * Page Datakle : mission, vision, valeurs, sections illustrées, puis les
+ * services publiés — en registre (Ruixen « Service Ledger ») et, quand quatre
+ * services au moins ont un visuel, en vitrine (Cult UI « Feature Carousel »).
+ */
 export default async function DataklePage() {
   const [locale, dict, page, services, socialLinks] = await Promise.all([
     getLocale(),
@@ -46,6 +54,7 @@ export default async function DataklePage() {
     getSocialLinks(),
   ]);
   const labels = dict.pages.datakle;
+  const home = dict.home.datakle;
 
   if (!page) {
     return (
@@ -97,44 +106,45 @@ export default async function DataklePage() {
 
         {services.length > 0 ? (
           <section className="border-t border-border py-14">
-            <div className="flex flex-wrap items-end gap-6">
+            <div className="mb-8 flex flex-wrap items-end gap-6">
               <h2 className="flex-1 text-3xl">{labels.sections.services}</h2>
               <Button asChild variant="ghost">
                 <Link href={href("services", locale)}>{labels.seeServices} →</Link>
               </Button>
             </div>
-            <ul className="mt-8 grid gap-4 sm:grid-cols-2 lg:grid-cols-3">
-              {services.slice(0, 6).map((service) => (
-                <li key={service.slug} className="rounded-2xl border border-border bg-white/45 p-5">
-                  <h3 className="text-lg">
-                    <Link
-                      href={href("services", locale, service.slug)}
-                      className="transition-colors hover:text-primary"
-                    >
-                      {service.title}
-                    </Link>
-                  </h3>
-                  {service.summary ? (
-                    <p className="mt-2 text-sm leading-6 text-muted-foreground">{service.summary}</p>
-                  ) : null}
-                </li>
-              ))}
-            </ul>
+            <ServiceLedger
+              title={home.title}
+              description={home.lead}
+              entries={services.map((service, index) => toServiceEntry(service, index, locale))}
+              navLabel={labels.sections.services}
+              className="py-0"
+              frameClassName="max-w-none px-0 sm:px-0"
+              contentClassName="max-w-none"
+            />
           </section>
         ) : null}
+
+        <ServiceShowcase
+          services={services}
+          title={home.title}
+          description={home.lead}
+          alt={labels.title}
+        />
 
         <section className="border-t border-border py-14">
           <h2 className="text-3xl">{labels.collaborate}</h2>
           <p className="mt-3 max-w-[58ch] text-muted-foreground">{labels.collaborateBody}</p>
-          <Button asChild size="cta" className="mt-6">
-            {cta.url.startsWith("http") ? (
+          {cta.url.startsWith("http") ? (
+            <Button asChild size="cta" className="mt-6">
               <a href={cta.url} target="_blank" rel="noreferrer noopener">
                 {cta.label}
               </a>
-            ) : (
-              <Link href={cta.url}>{cta.label}</Link>
-            )}
-          </Button>
+            </Button>
+          ) : (
+            <div className="mt-6">
+              <LiquidCtaLink href={cta.url}>{cta.label}</LiquidCtaLink>
+            </div>
+          )}
         </section>
       </Container>
     </>

@@ -1,9 +1,25 @@
+import { FileQuestion } from "lucide-react";
 import ReactMarkdown from "react-markdown";
 import remarkGfm from "remark-gfm";
 
 import { EditorialImage } from "@/components/motion/EditorialImage";
+import {
+  DitherImageContent,
+  DitherImageFrame,
+  DitherImageOverlay,
+  DitherImageReveal,
+} from "@/components/cult/dither-image";
+import { MilestoneStepper } from "@/components/ruixen/milestone-stepper";
 import { Reveal } from "@/components/motion/Reveal";
 import { Container } from "@/components/ui/Container";
+import {
+  Empty,
+  EmptyDescription,
+  EmptyHeader,
+  EmptyMedia,
+  EmptyTitle,
+} from "@/components/ui/empty";
+import { isUnconfiguredRemoteImage, resolveKnownImageSource } from "@/lib/media/assets";
 import type {
   PageCertification,
   PageEntry,
@@ -32,56 +48,68 @@ export function EditorialBody({ body, className }: { body?: string; className?: 
   );
 }
 
-/** Frise chronologique : période, intitulé, détail, illustration facultative. */
+/**
+ * Frise chronologique — Ruixen UI « Milestone Stepper ».
+ *
+ * Un parcours publié est un fait accompli : chaque jalon est rendu
+ * « completed », le composant n'étant pas ici un suivi de progression.
+ */
 export function EditorialTimeline({ title, entries }: { title: string; entries: PageTimelineEntry[] }) {
   if (entries.length === 0) return null;
 
   return (
     <section className="border-t border-border py-14">
       <h2 className="text-3xl">{title}</h2>
-      <ol className="mt-8 grid gap-4">
-        {entries.map((entry, index) => (
-          <li key={`${entry.title}-${index}`}>
-            <Reveal delay={index * 60}>
-              <article className="grid gap-4 rounded-xl border border-border bg-white/45 p-5 sm:grid-cols-[minmax(0,1fr)_auto] sm:items-start">
-                <div>
-                  {entry.period ? (
-                    <p className="tnum text-xs font-bold uppercase tracking-[.14em] text-[var(--copper-deep)]">
-                      {entry.period}
-                    </p>
-                  ) : null}
-                  <h3 className="mt-2 text-xl">{entry.title}</h3>
-                  {entry.detail ? (
-                    <p className="mt-2 max-w-[70ch] text-sm leading-6 text-muted-foreground">
-                      {entry.detail}
-                    </p>
-                  ) : null}
-                </div>
-                {entry.image ? (
-                  <EditorialImage
-                    src={entry.image}
-                    alt=""
-                    className="aspect-[4/3] min-h-0 w-full rounded-lg border-0 sm:w-44"
-                    sizes="176px"
-                  />
-                ) : null}
-              </article>
-            </Reveal>
-          </li>
-        ))}
-      </ol>
+      <div className="mt-8 max-w-2xl">
+        <MilestoneStepper
+          variant="detailed"
+          currentMilestone={entries.length}
+          milestones={entries.map((entry, index) => {
+            const image = entry.image ? resolveKnownImageSource(entry.image) : undefined;
+            return {
+              id: `${entry.title}-${index}`,
+              title: entry.title,
+              description: entry.detail,
+              date: entry.period,
+              image: image ? (typeof image === "string" ? image : image.src) : undefined,
+              imageUnoptimized: image ? isUnconfiguredRemoteImage(image) : undefined,
+            };
+          })}
+        />
+      </div>
     </section>
   );
 }
 
 /** Sections illustrées : un bloc texte + image, alternés. */
+/**
+ * Ancre stable d'une section éditoriale.
+ *
+ * Le rail de chapitres (Ruixen « Chapter Scrubber ») s'y rend : les deux
+ * doivent dériver l'identifiant de la même façon.
+ */
+export function sectionAnchorId(title: string, index: number): string {
+  const slug = title
+    .normalize("NFD")
+    .replace(/[\u0300-\u036f]/g, "")
+    .toLowerCase()
+    .replace(/[^a-z0-9]+/g, "-")
+    .replace(/^-+|-+$/g, "");
+
+  return slug ? `section-${slug}` : `section-${index + 1}`;
+}
+
 export function EditorialSections({ sections }: { sections: PageSection[] }) {
   if (sections.length === 0) return null;
 
   return (
     <div className="divide-y divide-border">
       {sections.map((section, index) => (
-        <section key={`${section.title}-${index}`} className="py-14">
+        <section
+          key={`${section.title}-${index}`}
+          id={sectionAnchorId(section.title, index)}
+          className="scroll-mt-28 py-14"
+        >
           <div
             className={`grid items-center gap-10 lg:grid-cols-2 lg:gap-16 ${
               index % 2 === 1 ? "lg:[&>*:first-child]:order-2" : ""
@@ -169,25 +197,25 @@ export function EditorialItems({
 }
 
 /** Parcours : postes ou diplômes, organisation et période. */
+/** Expériences — Ruixen UI « Milestone Stepper », en variante compacte. */
 export function EditorialEntries({ title, entries }: { title: string; entries: PageEntry[] }) {
   if (entries.length === 0) return null;
 
   return (
     <section className="border-t border-border py-14">
       <h2 className="text-3xl">{title}</h2>
-      <ol className="mt-8 grid gap-6">
-        {entries.map((entry, index) => (
-          <li key={`${entry.title}-${index}`} className="border-l-2 border-[var(--copper)]/40 pl-5">
-            <h3 className="text-xl">{entry.title}</h3>
-            <p className="mt-1 text-sm font-semibold text-muted-foreground">
-              {[entry.organisation, entry.period].filter(Boolean).join(" · ")}
-            </p>
-            {entry.detail ? (
-              <p className="mt-2 max-w-[74ch] text-sm leading-6 text-muted-foreground">{entry.detail}</p>
-            ) : null}
-          </li>
-        ))}
-      </ol>
+      <div className="mt-8 max-w-2xl">
+        <MilestoneStepper
+          variant="detailed"
+          currentMilestone={entries.length}
+          milestones={entries.map((entry, index) => ({
+            id: `${entry.title}-${index}`,
+            title: entry.title,
+            description: [entry.organisation, entry.detail].filter(Boolean).join(" — ") || undefined,
+            date: entry.period,
+          }))}
+        />
+      </div>
     </section>
   );
 }
@@ -247,16 +275,26 @@ export function EditorialGallery({ title, images }: { title: string; images: str
  * Sans page enregistrée, l'appelant affiche son propre état vide : ce
  * composant ne fabrique jamais de contenu de remplacement.
  */
+/**
+ * En-tête d'une page éditoriale.
+ *
+ * `dithered` fait passer la photographie d'ouverture par Cult UI
+ * « Dither Image Reveal » : le tramage tient la moitié droite du cadre et la
+ * photographie reste nette là où le regard se pose. Réservé aux ouvertures —
+ * appliqué partout, le motif cesserait d'être une signature.
+ */
 export function EditorialHeader({
   eyebrow,
   title,
   subtitle,
   image,
+  dithered = false,
 }: {
   eyebrow: string;
   title: string;
   subtitle?: string;
   image?: string;
+  dithered?: boolean;
 }) {
   return (
     <header className="py-14">
@@ -267,13 +305,17 @@ export function EditorialHeader({
           <p className="mt-6 max-w-[62ch] text-lg leading-8 text-muted-foreground">{subtitle}</p>
         ) : null}
         {image ? (
-          <EditorialImage
-            src={image}
-            alt=""
-            className="mt-10 aspect-[21/9] min-h-0 rounded-2xl border-0"
-            sizes="(max-width: 1024px) 100vw, 1180px"
-            priority
-          />
+          dithered ? (
+            <DitheredHeaderImage src={image} />
+          ) : (
+            <EditorialImage
+              src={image}
+              alt=""
+              className="mt-10 aspect-[21/9] min-h-0 rounded-2xl border-0"
+              sizes="(max-width: 1024px) 100vw, 1180px"
+              priority
+            />
+          )
         ) : null}
       </Container>
     </header>
@@ -281,11 +323,65 @@ export function EditorialHeader({
 }
 
 /** État vide honnête d'une page dont le contenu n'a pas encore été saisi. */
+/**
+ * État vide d'une page éditoriale dont le contenu n'a pas encore été saisi.
+ *
+ * shadcn `Empty` : le titre reste un vrai `<h1>` (c'est la page), le reste
+ * suit le registre.
+ */
 export function EditorialEmpty({ title, message }: { title: string; message: string }) {
   return (
-    <div className="py-20">
-      <h1 className="text-4xl">{title}</h1>
-      <p className="mt-4 max-w-[60ch] text-muted-foreground">{message}</p>
-    </div>
+    <Empty className="py-20">
+      <EmptyHeader>
+        <EmptyMedia variant="icon">
+          <FileQuestion aria-hidden="true" />
+        </EmptyMedia>
+        <EmptyTitle>
+          <h1 className="text-4xl font-heading">{title}</h1>
+        </EmptyTitle>
+        <EmptyDescription className="max-w-[60ch]">{message}</EmptyDescription>
+      </EmptyHeader>
+    </Empty>
+  );
+}
+
+/** Photographie d'ouverture tramée — Cult UI « Dither Image Reveal ». */
+function DitheredHeaderImage({ src }: { src: string }) {
+  const source = resolveKnownImageSource(src);
+  const unoptimized = isUnconfiguredRemoteImage(source);
+
+  return (
+    <DitherImageReveal className="mt-10 aspect-[21/9] w-full overflow-hidden rounded-2xl">
+      <DitherImageFrame
+        className="absolute inset-0 size-full"
+        size="sm"
+        grayscale={0.6}
+        contrast={114}
+        opacity={0.5}
+      >
+        <DitherImageContent
+          src={source}
+          alt=""
+          fill
+          sizes="(max-width: 1024px) 100vw, 1180px"
+          quality={75}
+          unoptimized={unoptimized}
+          className="object-cover"
+          preload
+        />
+      </DitherImageFrame>
+      <DitherImageOverlay
+        src={source}
+        alt=""
+        direction="r"
+        from={8}
+        to={72}
+        fill
+        sizes="(max-width: 1024px) 100vw, 1180px"
+        quality={75}
+        unoptimized={unoptimized}
+        className="object-cover"
+      />
+    </DitherImageReveal>
   );
 }
