@@ -190,7 +190,7 @@ export default function FooterPro(props?: FooterProProps) {
           <div className="flex flex-col items-start justify-between gap-4 sm:flex-row sm:items-center">
             <p className="text-[12px] text-current/50">{copyright}</p>
 
-            <div className="flex items-center gap-5">
+            <div className="flex flex-wrap items-center gap-x-5 gap-y-3">
               {bottomLinks.map((link) => (
                 <Link
                   key={link.label}
