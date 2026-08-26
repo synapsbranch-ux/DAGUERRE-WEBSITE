@@ -4,7 +4,7 @@ import { usePathname } from "next/navigation";
 
 import { HoverGradientNavBar } from "@/components/ruixen/hover-gradient-navbar";
 
-export type SiteNavItem = { label: string; href: string };
+export type SiteNavItem = { label: string; href: string; icon?: React.ReactNode };
 
 /**
  * Navigation principale du bureau.

@@ -1,11 +1,11 @@
-import { ArrowUpRight } from "lucide-react";
+import { ArrowUpRight, Briefcase, Building2, Layers, Newspaper, UserRound } from "lucide-react";
 
 import { LocaleSwitcher } from "@/components/layout/LocaleSwitcher";
 import { MobileNav, type MobileNavSection } from "@/components/layout/MobileNav";
 import { SiteNav } from "@/components/layout/SiteNav";
 import { legalNavKeys, secondaryNavKeys } from "@/components/layout/Navigation";
 import { LiquidCtaLink } from "@/components/liquefy/LiquidCtaLink";
-import NavbarSplit from "@/components/ruixen/navbar-split";
+import NavbarFloating from "@/components/ruixen/navbar-floating";
 import type { Dictionary } from "@/lib/dictionaries";
 import type { Locale } from "@/lib/i18n";
 import { href, routes, type RouteKey } from "@/lib/routes";
@@ -25,10 +25,21 @@ type HeaderProps = {
 /** Rubriques candidates à la barre principale, dans l'ordre du récit. */
 const primaryKeys: RouteKey[] = ["about", "projects", "datakle", "services", "blog"];
 
+/** Un repère visuel par rubrique — la barre à bascule les affiche à côté du libellé. */
+const primaryIcons: Partial<Record<RouteKey, React.ReactNode>> = {
+  about: <UserRound aria-hidden="true" className="size-[15px]" />,
+  projects: <Briefcase aria-hidden="true" className="size-[15px]" />,
+  datakle: <Building2 aria-hidden="true" className="size-[15px]" />,
+  services: <Layers aria-hidden="true" className="size-[15px]" />,
+  blog: <Newspaper aria-hidden="true" className="size-[15px]" />,
+};
+
 /**
- * En-tête du site — Ruixen UI « Navbar Split » comme structure, avec la barre
- * à bascule « Hover Gradient NavBar » en navigation et l'appel à l'action en
- * verre liquide (Liquefy).
+ * En-tête du site — Ruixen UI « Navbar Floating » comme structure (pilule
+ * détachée du bord, plutôt que la barre pleine largeur de « Navbar Split »),
+ * avec la barre à bascule « Hover Gradient NavBar » en navigation — chaque
+ * entrée porte désormais une icône Lucide — et l'appel à l'action en verre
+ * liquide (Liquefy).
  *
  * Le composant reste un composant serveur : seuls la navigation (qui lit le
  * chemin courant), le sélecteur de langue et le menu mobile sont clients.
@@ -37,7 +48,11 @@ export function Header({ locale, dict, populated }: HeaderProps) {
   const visible = (key: RouteKey) => populated[key] !== false;
   const navKeys = primaryKeys.filter(visible);
 
-  const items = navKeys.map((key) => ({ label: routes[key].label[locale], href: href(key, locale) }));
+  const items = navKeys.map((key) => ({
+    label: routes[key].label[locale],
+    href: href(key, locale),
+    icon: primaryIcons[key],
+  }));
 
   const mobileSections: MobileNavSection[] = [
     {
@@ -64,9 +79,9 @@ export function Header({ locale, dict, populated }: HeaderProps) {
       <MobileNav locale={locale} dict={dict} brandName={siteConfig.name} sections={mobileSections} />
       <div className="h-[72px] lg:hidden" aria-hidden="true" />
 
-      <NavbarSplit
-        className="sticky top-0 z-40 hidden border-white/10 bg-[var(--navy-950)]/94 text-white shadow-[0_8px_30px_rgb(0_0_0_/_0.08)] backdrop-blur-xl lg:block"
-        innerClassName="mx-auto h-[76px] w-full max-w-[1440px] px-5 sm:px-10 lg:px-[130px]"
+      <NavbarFloating
+        className="sticky top-0 z-40 hidden px-5 pt-5 pb-3 sm:px-10 lg:block lg:px-[70px]"
+        innerClassName="h-[68px] max-w-[1300px] border-white/10 bg-[var(--navy-950)]/94 px-6 text-white shadow-[0_8px_30px_rgb(0_0_0_/_0.16)] backdrop-blur-xl lg:px-9"
         logoHref={href("home", locale)}
         logo={
           <span className="flex items-center gap-3">
