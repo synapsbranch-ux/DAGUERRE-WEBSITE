@@ -12,6 +12,16 @@ import { Input } from "@/components/ui/input";
 import { ScrollArea } from "@/components/ui/scroll-area";
 import { cn } from "@/lib/utils";
 
+/**
+ * Ruixen UI — Tag Cloud Select.
+ *
+ * Adaptations Daguerre : les gris codés en dur (`bg-gray-100`, `dark:bg-black`,
+ * `text-gray-500`…) laissent place aux jetons de la charte, et le déclencheur
+ * accepte sa propre largeur (`triggerClassName`) — 300px fixes ne convenaient
+ * pas à toutes les mises en page. L'interaction — pastilles dont la taille
+ * suit la popularité, recherche, sélection multiple — reste celle d'origine.
+ */
+
 export interface TagCloudOption {
   value: string;
   label: string;
@@ -27,6 +37,7 @@ interface TagCloudSelectProps {
   minFontSize?: number; // e.g., 12
   maxFontSize?: number; // e.g., 28
   showSearch?: boolean;
+  triggerClassName?: string;
 }
 
 export const TagCloudSelect: React.FC<TagCloudSelectProps> = ({
@@ -37,6 +48,7 @@ export const TagCloudSelect: React.FC<TagCloudSelectProps> = ({
   minFontSize = 12,
   maxFontSize = 28,
   showSearch = true,
+  triggerClassName,
 }) => {
   const [open, setOpen] = React.useState(false);
   const [selected, setSelected] = React.useState<string[]>(defaultSelected);
@@ -72,7 +84,7 @@ export const TagCloudSelect: React.FC<TagCloudSelectProps> = ({
   return (
     <Popover open={open} onOpenChange={setOpen}>
       <PopoverTrigger asChild>
-        <Button variant="outline" className="w-[300px] flex justify-between">
+        <Button variant="outline" className={cn("flex w-[300px] justify-between", triggerClassName)}>
           {selected.length > 0
             ? `${selected.length} tag(s) selected`
             : placeholder}
@@ -97,8 +109,8 @@ export const TagCloudSelect: React.FC<TagCloudSelectProps> = ({
                 className={cn(
                   "transition-all rounded-full px-3 py-1 font-medium cursor-pointer border",
                   selected.includes(opt.value)
-                    ? "bg-primary text-primary-foreground border-primary"
-                    : "bg-gray-100 hover:bg-gray-200 dark:bg-black dark:hover:bg-gray-950",
+                    ? "border-primary bg-primary text-primary-foreground"
+                    : "border-border bg-muted hover:bg-accent",
                 )}
                 style={{
                   fontSize: getFontSize(opt.popularity),
@@ -111,7 +123,7 @@ export const TagCloudSelect: React.FC<TagCloudSelectProps> = ({
               </button>
             ))}
             {filteredOptions.length === 0 && (
-              <p className="text-sm text-gray-500">No tags found.</p>
+              <p className="text-sm text-muted-foreground">No tags found.</p>
             )}
           </div>
         </ScrollArea>

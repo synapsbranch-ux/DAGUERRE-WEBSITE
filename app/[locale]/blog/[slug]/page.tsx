@@ -1,18 +1,19 @@
 import type { Metadata } from "next";
 import Link from "next/link";
 import { notFound } from "next/navigation";
-import ReactMarkdown from "react-markdown";
-import remarkGfm from "remark-gfm";
-
 import { EditorialImage } from "@/components/motion/EditorialImage";
+import { ArticleMarkdown } from "@/components/sections/ArticleMarkdown";
+import { ChapterRail } from "@/components/sections/ChapterRail";
 import { PostRow } from "@/components/sections/PostRow";
 import { JsonLd } from "@/components/seo/JsonLd";
+import { Badge } from "@/components/ui/badge";
 import { Container } from "@/components/ui/Container";
 import { PageHeader } from "@/components/ui/PageHeader";
 import { Section } from "@/components/ui/Section";
 import { getPostBySlug, getPosts, getRelatedPosts } from "@/lib/content";
 import { getDictionary, getDictionaryFor, getLocale } from "@/lib/dictionaries";
 import { isLocale } from "@/lib/i18n";
+import { extractMarkdownHeadings } from "@/lib/markdown-headings";
 import { href, humanizeSlug } from "@/lib/routes";
 import { blogPostingSchema } from "@/lib/schema";
 import { createMetadata } from "@/lib/seo";
@@ -65,10 +66,13 @@ export default async function ArticlePage({ params }: PageProps<"/[locale]/blog/
 
   const related = await getRelatedPosts(post, locale);
   const article = dict.pages.blog.article;
+  const headings = post.body ? extractMarkdownHeadings(post.body) : [];
 
   return (
     <Container>
       <JsonLd data={blogPostingSchema(post)} />
+
+      <ChapterRail label={article.content} chapters={headings.map((h) => ({ id: h.id, title: h.title }))} />
 
       <article>
         <PageHeader eyebrow={article.eyebrow} title={post.title} description={post.excerpt}>
@@ -92,12 +96,11 @@ export default async function ArticlePage({ params }: PageProps<"/[locale]/blog/
         <div className="divide-y divide-border">
           {post.body ? (
             <Section title={article.content}>
-              {/* `skipHtml` : le Markdown du CMS ne peut pas injecter de HTML brut. */}
-              <div className="prose max-w-3xl text-foreground prose-p:leading-relaxed">
-                <ReactMarkdown remarkPlugins={[remarkGfm]} skipHtml>
-                  {post.body}
-                </ReactMarkdown>
-              </div>
+              <ArticleMarkdown
+                body={post.body}
+                headings={headings}
+                className="prose max-w-3xl text-foreground prose-p:leading-relaxed"
+              />
             </Section>
           ) : null}
 
@@ -106,22 +109,16 @@ export default async function ArticlePage({ params }: PageProps<"/[locale]/blog/
               <ul className="flex flex-wrap gap-2">
                 {post.categories.map((category) => (
                   <li key={`categorie-${category}`}>
-                    <Link
-                      href={href("blogCategory", locale, category)}
-                      className="inline-flex rounded-sm border border-border px-3 py-1 text-sm transition-colors hover:bg-foreground/7"
-                    >
-                      {humanizeSlug(category)}
-                    </Link>
+                    <Badge variant="secondary" asChild>
+                      <Link href={href("blogCategory", locale, category)}>{humanizeSlug(category)}</Link>
+                    </Badge>
                   </li>
                 ))}
                 {post.tags.map((tag) => (
                   <li key={`tag-${tag}`}>
-                    <Link
-                      href={href("blogTag", locale, tag)}
-                      className="inline-flex rounded-sm border border-border px-3 py-1 text-sm transition-colors hover:bg-foreground/7"
-                    >
-                      #{humanizeSlug(tag)}
-                    </Link>
+                    <Badge variant="outline" asChild>
+                      <Link href={href("blogTag", locale, tag)}>#{humanizeSlug(tag)}</Link>
+                    </Badge>
                   </li>
                 ))}
               </ul>

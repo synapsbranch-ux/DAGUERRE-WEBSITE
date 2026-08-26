@@ -379,6 +379,8 @@ export const fr = {
         "Data analytics, business intelligence, visualisation, Excel/VBA, SQL, Python, gestion de projet, suivi-évaluation, recherche et stratégie.",
       categories: "Catégories",
       todo: "Les détails seront ajoutés à cette entrée.",
+      explore: "Explorer par compétence",
+      explorePlaceholder: "Choisir des compétences…",
     },
 
     contact: {

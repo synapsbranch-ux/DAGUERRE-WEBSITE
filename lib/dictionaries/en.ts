@@ -364,6 +364,8 @@ export const en = {
         "Data analytics, business intelligence, visualisation, Excel/VBA, SQL, Python, project management, monitoring and evaluation, research and strategy.",
       categories: "Categories",
       todo: "Details will be added to this entry.",
+      explore: "Explore by skill",
+      explorePlaceholder: "Pick skills…",
     },
 
     contact: {

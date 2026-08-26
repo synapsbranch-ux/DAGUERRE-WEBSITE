@@ -1,10 +1,10 @@
 import type { Metadata } from "next";
 
 import { ContactCTA } from "@/components/sections/ContactCTA";
-import { EditorialImage } from "@/components/motion/EditorialImage";
-import { Reveal } from "@/components/motion/Reveal";
-import { Badge } from "@/components/ui/badge";
+import { ResearchCard } from "@/components/sections/ResearchCard";
+import { MagneticTabs, type MagneticTabItem } from "@/components/ruixen/magnetic-tabs";
 import { Container } from "@/components/ui/Container";
+import { Empty, EmptyDescription, EmptyHeader, EmptyTitle } from "@/components/ui/empty";
 import { PageHeader } from "@/components/ui/PageHeader";
 import { getDictionary, getDictionaryFor, getLocale } from "@/lib/dictionaries";
 import { isLocale } from "@/lib/i18n";
@@ -28,93 +28,63 @@ export async function generateMetadata({
   });
 }
 
-/** Travaux de recherche publiés — MongoDB exclusivement. */
+/**
+ * Travaux de recherche publiés — MongoDB exclusivement.
+ *
+ * Regroupés par nature (mémoire, publication, projet…) dans Ruixen UI
+ * « Magnetic Tabs » dès que deux catégories au moins sont représentées ;
+ * un seul type de travaux publié n'a pas besoin d'onglets. Chaque entrée est
+ * une carte Cult UI « Cutout Card ».
+ *
+ * Substitution documentée : la maquette de référence proposait Ruixen
+ * « Case Study Tabs », mais ce composant est un bloc de témoignages clients
+ * (logo de marque + citation) — inadapté à un index de travaux académiques.
+ * « Magnetic Tabs » est le composant à onglets le plus proche dans le même
+ * registre.
+ */
 export default async function RecherchePage() {
   const [locale, dict, research] = await Promise.all([getLocale(), getDictionary(), getResearch()]);
   const page = dict.pages.research;
+
+  const categories = Array.from(
+    new Set(research.map((entry) => entry.type).filter((type): type is string => Boolean(type))),
+  );
+
+  const cardLabels = { documents: page.sections.documents, publications: page.sections.publications };
+
+  const grid = (entries: typeof research) => (
+    <ul className="grid gap-6 sm:grid-cols-2 lg:grid-cols-3">
+      {entries.map((entry) => (
+        <li key={entry.id}>
+          <ResearchCard entry={entry} labels={cardLabels} />
+        </li>
+      ))}
+    </ul>
+  );
+
+  const tabs: MagneticTabItem[] = categories.map((category) => ({
+    value: category,
+    label: category,
+    content: grid(research.filter((entry) => entry.type === category)),
+  }));
 
   return (
     <Container>
       <PageHeader eyebrow={page.eyebrow} title={page.title} description={page.description} />
 
-      {research.length > 0 ? (
-        <ul className="grid gap-5 border-t border-border py-14">
-          {research.map((entry, index) => (
-            <li key={entry.id}>
-              <Reveal delay={index * 60}>
-                <article className="grid gap-5 rounded-2xl border border-border bg-white/45 p-6 sm:grid-cols-[auto_minmax(0,1fr)]">
-                  {entry.image ? (
-                    <EditorialImage
-                      src={entry.image}
-                      alt=""
-                      className="aspect-[4/3] min-h-0 w-full rounded-lg border-0 sm:w-52"
-                      sizes="208px"
-                    />
-                  ) : null}
-
-                  <div>
-                    <div className="flex flex-wrap items-center gap-2">
-                      {entry.type ? <Badge variant="secondary">{entry.type}</Badge> : null}
-                      {entry.year ? <Badge variant="outline">{entry.year}</Badge> : null}
-                    </div>
-
-                    <h2 className="mt-3 text-2xl leading-tight">{entry.title}</h2>
-
-                    {entry.institution || entry.authors.length > 0 ? (
-                      <p className="mt-1.5 text-sm font-semibold text-muted-foreground">
-                        {[entry.authors.join(", "), entry.institution].filter(Boolean).join(" — ")}
-                      </p>
-                    ) : null}
-
-                    {entry.summary ? (
-                      <p className="mt-3 max-w-[74ch] text-sm leading-6 text-muted-foreground">
-                        {entry.summary}
-                      </p>
-                    ) : null}
-
-                    {entry.tags.length > 0 ? (
-                      <ul className="mt-4 flex flex-wrap gap-1.5">
-                        {entry.tags.map((tag) => (
-                          <li key={tag}>
-                            <Badge variant="outline">{tag}</Badge>
-                          </li>
-                        ))}
-                      </ul>
-                    ) : null}
-
-                    {entry.documentUrl || entry.externalUrl ? (
-                      <p className="mt-4 flex flex-wrap gap-4 text-sm font-semibold">
-                        {entry.documentUrl ? (
-                          <a
-                            href={entry.documentUrl}
-                            target="_blank"
-                            rel="noreferrer noopener"
-                            className="text-[var(--copper-deep)] underline-offset-4 hover:underline"
-                          >
-                            {page.sections.documents} →
-                          </a>
-                        ) : null}
-                        {entry.externalUrl ? (
-                          <a
-                            href={entry.externalUrl}
-                            target="_blank"
-                            rel="noreferrer noopener"
-                            className="text-[var(--copper-deep)] underline-offset-4 hover:underline"
-                          >
-                            {page.sections.publications} →
-                          </a>
-                        ) : null}
-                      </p>
-                    ) : null}
-                  </div>
-                </article>
-              </Reveal>
-            </li>
-          ))}
-        </ul>
-      ) : (
-        <p className="border-t border-border py-14 text-muted-foreground">{dict.common.empty}</p>
-      )}
+      <div className="border-t border-border py-14">
+        {research.length === 0 ? (
+          <Empty>
+            <EmptyHeader>
+              <EmptyTitle>{dict.common.empty}</EmptyTitle>
+            </EmptyHeader>
+          </Empty>
+        ) : tabs.length >= 2 ? (
+          <MagneticTabs items={tabs} defaultValue={tabs[0]?.value} />
+        ) : (
+          grid(research)
+        )}
+      </div>
 
       <ContactCTA locale={locale} dict={dict} />
     </Container>
