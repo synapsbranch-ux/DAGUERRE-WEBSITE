@@ -11,6 +11,8 @@ import {
   type PortalCounts,
 } from "@/lib/platform/client";
 import { currentPathname } from "@/lib/platform/request";
+import { accountWelcomeEmail } from "@/lib/email/templates";
+import { publicUrl, sendTransactionalEmail } from "@/lib/email/service";
 import { href } from "@/lib/routes";
 
 /**
@@ -46,10 +48,25 @@ export async function requirePortal(locale: Locale): Promise<PortalContext> {
 
   if (!(await tryConnectToDatabase())) redirect(`${loginHref}?error=database`);
 
-  const [profile, counts] = await Promise.all([
+  const [{ profile, created }, counts] = await Promise.all([
     ensureClientProfile(session.user.id, { name: session.user.name, locale }),
     getPortalCounts(session.user.id),
   ]);
+
+  /*
+   * Bienvenue envoyée à la création de la fiche, donc exactement une fois.
+   * L'attacher à l'inscription elle-même aurait lié la création d'un compte à
+   * la disponibilité du fournisseur de courriel.
+   */
+  if (created) {
+    await sendTransactionalEmail(
+      session.user.email,
+      accountWelcomeEmail(locale, {
+        name: profile.firstName || session.user.name || session.user.email,
+        portalUrl: publicUrl("portal", locale),
+      }),
+    ).catch(() => null);
+  }
 
   return { session, profile, counts, locale };
 }

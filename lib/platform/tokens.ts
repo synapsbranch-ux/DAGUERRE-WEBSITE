@@ -59,10 +59,16 @@ function safeEqual(a: string, b: string): boolean {
  * des mois.
  */
 export function createToken(purpose: string, subject: string, ttlSeconds = 0): string {
+  /*
+   * `0` produit un jeton permanent — c'est le cas du lien de désabonnement.
+   * Toute autre valeur, **y compris négative**, produit une date d'expiration :
+   * une durée négative passée par erreur donne un jeton déjà périmé, jamais un
+   * jeton éternel.
+   */
   const payload: Payload = {
     p: purpose,
     s: subject,
-    e: ttlSeconds > 0 ? Math.floor(Date.now() / 1000) + ttlSeconds : 0,
+    e: ttlSeconds === 0 ? 0 : Math.floor(Date.now() / 1000) + ttlSeconds,
   };
   const body = base64url(JSON.stringify(payload));
   return `${body}${SEPARATOR}${sign(body)}`;

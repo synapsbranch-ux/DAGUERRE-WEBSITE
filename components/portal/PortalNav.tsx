@@ -1,6 +1,5 @@
 "use client";
 
-import { usePathname } from "next/navigation";
 import {
   Bell,
   FileText,
@@ -13,6 +12,7 @@ import {
 } from "lucide-react";
 
 import { HoverGradientNavBar } from "@/components/ruixen/hover-gradient-navbar";
+import { usePublicPathname } from "@/hooks/use-public-pathname";
 
 export type PortalNavItem = {
   key: string;
@@ -43,7 +43,7 @@ const ICONS: Record<string, React.ReactNode> = {
  * ferait un geste supplémentaire à chaque navigation.
  */
 export function PortalNav({ items, label }: { items: PortalNavItem[]; label: string }) {
-  const pathname = usePathname() ?? "";
+  const pathname = usePublicPathname();
 
   return (
     <div className="-mx-5 overflow-x-auto px-5 sm:mx-0 sm:px-0">

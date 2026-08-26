@@ -1,6 +1,6 @@
 import { NextResponse } from "next/server";
 
-import { connectToDatabase } from "@/lib/db/client";
+import { tryConnectToDatabase } from "@/lib/db/client";
 import {
   ContentDownloadModel,
   ContentResourceModel,
@@ -54,7 +54,10 @@ export async function GET(request: Request, { params }: { params: Promise<{ id: 
     return NextResponse.json({ error: "Trop de téléchargements. Réessayez plus tard." }, { status: 429 });
   }
 
-  await connectToDatabase();
+  if (!(await tryConnectToDatabase())) {
+    return NextResponse.json({ error: "Bibliothèque indisponible." }, { status: 503 });
+  }
+
   const session = await readPlatformSession();
   const isAdmin = session ? isAdminRole(session.user.role) : false;
 

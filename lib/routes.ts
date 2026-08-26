@@ -404,6 +404,28 @@ export function toInternalPath(locale: Locale, publicPath: string): string | nul
   return null;
 }
 
+/**
+ * Forme **publique** d'un chemin, quelle que soit sa provenance.
+ *
+ * `proxy.ts` réécrit `/en/portfolio` vers `/en/realisations` : pendant le
+ * rendu serveur, `usePathname()` voit donc le chemin **interne**, alors que le
+ * navigateur, lui, voit le chemin public. Un composant client qui déduit un
+ * libellé du chemin rendrait deux textes différents de part et d'autre — et
+ * React signale l'écart comme une erreur d'hydratation.
+ *
+ * Normaliser des deux côtés supprime la divergence : un chemin déjà public est
+ * rendu tel quel, un chemin interne est traduit.
+ */
+export function publicPathname(locale: Locale, pathname: string): string {
+  const trimmed = pathname.replace(/^\/+/, "");
+  const prefix = `${locale}/`;
+  if (!trimmed.startsWith(prefix)) return pathname;
+
+  const rest = trimmed.slice(prefix.length);
+  const canonical = toPublicPath(locale, rest);
+  return canonical === null ? pathname : `/${locale}/${canonical}`;
+}
+
 /** Transforme un slug en libellé lisible : `suivi-evaluation` → `Suivi evaluation`. */
 export function humanizeSlug(slug: string): string {
   const words = decodeURIComponent(slug).replace(/[-_]+/g, " ").trim();

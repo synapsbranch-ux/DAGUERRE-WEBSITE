@@ -1,3 +1,10 @@
+# Scripts d'installation autorisés.
+#
+# `esbuild` est tiré par `tsx`, qui exécute la suite de tests. Son script
+# d'installation ne fait que lier le binaire distribué dans un paquet
+# spécifique à la plate-forme, déjà installé : le refuser n'empêche rien et
+# évite d'exécuter du code arbitraire à l'installation.
 allowBuilds:
+  esbuild: false
   sharp: false
   unrs-resolver: false

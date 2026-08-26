@@ -1,6 +1,6 @@
 import { NextResponse } from "next/server";
 
-import { connectToDatabase } from "@/lib/db/client";
+import { tryConnectToDatabase } from "@/lib/db/client";
 import { QuoteRequestModel, StoredFileModel } from "@/lib/db/models/platform";
 import {
   quoteReceivedAdminEmail,
@@ -96,7 +96,13 @@ export async function POST(request: Request) {
     });
   }
 
-  await connectToDatabase();
+  if (!(await tryConnectToDatabase())) {
+    return NextResponse.json(
+      { error: "La demande n'a pas pu être enregistrée. Réessayez dans un instant." },
+      { status: 503 },
+    );
+  }
+
   const session = await readPlatformSession();
   const userId = session?.user.id ?? "";
 

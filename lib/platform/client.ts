@@ -55,14 +55,19 @@ function toProfile(userId: string, doc: ProfileDoc | null): ClientProfile {
  * `upsert` avec `$setOnInsert` est atomique : deux onglets ouverts en même
  * temps ne produisent pas deux fiches, et l'index unique sur `userId` refuse
  * de toute façon la seconde.
+ *
+ * `created` distingue la première visite des suivantes : c'est ce qui permet
+ * d'envoyer le courriel de bienvenue **une seule fois**, sans ajouter de
+ * crochet dans le cycle de vie de Better Auth — un échec d'écriture Mongoose
+ * y ferait échouer une inscription pour une raison sans rapport.
  */
 export async function ensureClientProfile(
   userId: string,
   defaults: { name?: string; locale?: Locale } = {},
-): Promise<ClientProfile> {
+): Promise<{ profile: ClientProfile; created: boolean }> {
   const [firstName = "", ...rest] = (defaults.name ?? "").trim().split(/\s+/);
 
-  const doc = (await ClientProfileModel.findOneAndUpdate(
+  const result = await ClientProfileModel.findOneAndUpdate(
     { userId },
     {
       $setOnInsert: {
@@ -72,10 +77,20 @@ export async function ensureClientProfile(
         preferredLanguage: defaults.locale ?? defaultLocale,
       },
     },
-    { new: true, upsert: true, setDefaultsOnInsert: true },
-  ).lean()) as ProfileDoc | null;
+    { new: true, upsert: true, setDefaultsOnInsert: true, includeResultMetadata: true },
+  ).lean();
 
-  return toProfile(userId, doc);
+  /*
+   * `includeResultMetadata` renvoie le rapport brut du pilote, dont le type
+   * générique n'expose pas `upserted` : la présence de ce champ dans
+   * `lastErrorObject` est précisément ce qui distingue une insertion d'une
+   * mise à jour.
+   */
+  const report = result as { value?: unknown; lastErrorObject?: { upserted?: unknown } } | null;
+  const doc = (report?.value ?? null) as ProfileDoc | null;
+  const created = Boolean(report?.lastErrorObject?.upserted);
+
+  return { profile: toProfile(userId, doc), created };
 }
 
 export async function getClientProfile(userId: string): Promise<ClientProfile | null> {

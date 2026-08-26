@@ -6,6 +6,7 @@ import {
   readPlatformSession,
   type PlatformSession,
 } from "@/lib/platform/access";
+import { currentPathname } from "@/lib/platform/request";
 
 export type AdminUser = PlatformSession["user"];
 export type AdminSession = PlatformSession;
@@ -31,7 +32,14 @@ export async function readSession(): Promise<AdminSession | null> {
  */
 export async function requireAdmin(): Promise<AdminSession> {
   const session = await readSession();
-  if (!session) redirect("/connexion?suivant=%2Fadmin");
+
+  if (!session) {
+    // Le proxy pose le chemin demandé : l'administrateur revient sur l'écran
+    // qu'il visait, pas sur l'accueil du tableau de bord.
+    const requested = (await currentPathname()) ?? "/admin";
+    redirect(`/connexion?suivant=${encodeURIComponent(requested)}`);
+  }
+
   if (!isAdminRole(session.user.role)) redirect("/connexion?error=forbidden");
   return session;
 }

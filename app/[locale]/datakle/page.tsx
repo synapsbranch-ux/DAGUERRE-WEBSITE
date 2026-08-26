@@ -145,6 +145,14 @@ export default async function DataklePage() {
               <LiquidCtaLink href={cta.url}>{cta.label}</LiquidCtaLink>
             </div>
           )}
+
+          {/* Porte d'entrée directe vers l'estimation, sans passer par le contact. */}
+          <Link
+            href={href("quote", locale)}
+            className="mt-6 inline-flex items-center rounded-md border border-border px-5 py-3 text-sm font-medium transition-colors hover:bg-foreground/5"
+          >
+            {dict.platform.quotes.title}
+          </Link>
         </section>
       </Container>
     </>

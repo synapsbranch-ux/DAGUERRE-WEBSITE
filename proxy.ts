@@ -23,6 +23,17 @@ import { toInternalPath, toPublicPath } from "@/lib/routes";
 export function proxy(request: NextRequest) {
   const { pathname } = request.nextUrl;
 
+  /*
+   * Le tableau de bord n'est pas localisé : il ne reçoit que l'en-tête de
+   * chemin, qui permet à sa garde de renvoyer l'administrateur exactement là
+   * où il allait après sa connexion.
+   */
+  if (pathname === "/admin" || pathname.startsWith("/admin/")) {
+    const headers = new Headers(request.headers);
+    headers.set(PATHNAME_HEADER, pathname);
+    return NextResponse.next({ request: { headers } });
+  }
+
   const firstSegment = pathname.split("/")[1] ?? "";
 
   // Pas encore de locale dans l'URL → on redirige.
@@ -76,11 +87,11 @@ export const config = {
     /*
      * Tout sauf :
      *  - les internes Next (`_next`) et les routes d'API
-     *  - le tableau de bord, qui n'est pas localisé
+     *  - le tableau de bord conserve sa propre branche ci-dessus
      *  - les fichiers de métadonnées servis à la racine
      *  - tout chemin contenant un point (fichiers statiques)
      */
-    "/((?!_next|api|admin|favicon\\.ico|icon|apple-icon|sitemap\\.xml|robots\\.txt|manifest\\.webmanifest|opengraph-image|.*\\..*).*)",
+    "/((?!_next|api|favicon\\.ico|icon|apple-icon|sitemap\\.xml|robots\\.txt|manifest\\.webmanifest|opengraph-image|.*\\..*).*)",
   ],
 };
 

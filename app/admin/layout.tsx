@@ -3,6 +3,7 @@ import type { ReactNode } from "react";
 import { requireAdmin } from "@/lib/admin";
 import { fontVariables } from "@/lib/fonts";
 import { AdminNav } from "@/components/admin/AdminNav";
+import { getAdminCounts, navCounts } from "@/lib/platform/admin-dashboard";
 import "../globals.css";
 
 export const metadata = {
@@ -19,12 +20,16 @@ export const metadata = {
  */
 export default async function AdminLayout({ children }: { children: ReactNode }) {
   const session = await requireAdmin();
+  const counts = await getAdminCounts();
 
   return (
     <html lang="fr" className={fontVariables}>
       <body>
         <div className="min-h-screen bg-background">
-          <AdminNav user={{ name: session.user.name, email: session.user.email }} />
+          <AdminNav
+            user={{ name: session.user.name, email: session.user.email }}
+            counts={navCounts(counts)}
+          />
           <main className="p-5 sm:p-8 lg:ml-64">{children}</main>
         </div>
       </body>

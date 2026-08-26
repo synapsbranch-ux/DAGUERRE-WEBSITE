@@ -4,6 +4,7 @@ import { redirect } from "next/navigation";
 
 import { getAuth } from "@/lib/auth";
 import { isAdminRole, isStaffRole, normalizeRole, type Role } from "@/lib/platform/enums";
+import { safeNextPath } from "@/lib/platform/pathname";
 
 /**
  * Contrôle d'accès — source unique de vérité.
@@ -60,19 +61,7 @@ export async function readPlatformSession(): Promise<PlatformSession | null> {
   }
 }
 
-/**
- * Chemin de retour sûr.
- *
- * Seul un chemin interne est accepté. `//exemple.com` et `https://exemple.com`
- * sont rejetés : le premier est une URL protocole-relative, et les deux
- * transformeraient la page de connexion en tremplin de redirection ouverte.
- */
-export function safeNextPath(value: unknown, fallback: string): string {
-  if (typeof value !== "string") return fallback;
-  const trimmed = value.trim();
-  if (!trimmed.startsWith("/") || trimmed.startsWith("//") || trimmed.includes("\\")) return fallback;
-  return trimmed;
-}
+export { safeNextPath };
 
 /* ------------------------------------------------------------------ */
 /* Gardes de pages                                                     */

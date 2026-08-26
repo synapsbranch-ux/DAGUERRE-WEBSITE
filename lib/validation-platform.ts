@@ -61,6 +61,16 @@ const optionalObjectId = z
 
 const localeField = z.enum(["fr", "en"]).default("fr");
 
+/**
+ * Piège à pourriel.
+ *
+ * Le champ est **accepté** par le schéma, puis inspecté par le gestionnaire,
+ * qui répond alors un succès factice. Le refuser ici renverrait une erreur de
+ * validation : un robot saurait immédiatement qu'il a été repéré et
+ * réessaierait sans remplir le champ.
+ */
+const honeypot = z.string().max(200).optional().default("");
+
 /* ------------------------------------------------------------------ */
 /* Infolettre                                                          */
 /* ------------------------------------------------------------------ */
@@ -80,8 +90,7 @@ export const newsletterSubscribeSchema = z.object({
   consent: z.literal(true, { message: "Le consentement est obligatoire." }),
   source: z.enum([...subscriberSources]).default("homepage"),
   locale: localeField,
-  /** Piège à pourriel : un visiteur ne le remplit jamais. */
-  website: z.string().max(0).optional().default(""),
+  website: honeypot,
 });
 
 /** Ajout manuel depuis le CMS — l'administrateur atteste du consentement. */
@@ -189,7 +198,7 @@ export const quoteRequestInputSchema = z.object({
   newsletterOptIn: z.boolean().default(false),
   /** Identifiant de soumission, pour l'idempotence. */
   submissionId: text(64).optional().default(""),
-  website: z.string().max(0).optional().default(""),
+  website: honeypot,
 });
 
 export const quoteStatusUpdateSchema = z.object({

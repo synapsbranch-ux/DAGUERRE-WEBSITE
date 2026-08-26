@@ -1,6 +1,6 @@
 import { NextResponse } from "next/server";
 
-import { connectToDatabase } from "@/lib/db/client";
+import { tryConnectToDatabase } from "@/lib/db/client";
 import { validObjectId } from "@/lib/http";
 import { downloadHeaders, readPrivateFile } from "@/lib/media/files";
 import { readPlatformSession } from "@/lib/platform/access";
@@ -23,7 +23,12 @@ export async function GET(_: Request, { params }: { params: Promise<{ id: string
   const { id } = await params;
   if (!validObjectId(id)) return NextResponse.json({ error: "Introuvable" }, { status: 404 });
 
-  await connectToDatabase();
+  // Base injoignable : on l'annonce, plutôt que de laisser filer une trace
+  // d'exécution dans une réponse publique.
+  if (!(await tryConnectToDatabase())) {
+    return NextResponse.json({ error: "Stockage indisponible." }, { status: 503 });
+  }
+
   const session = await readPlatformSession();
   const access = await resolveFileAccess(id, session);
 
