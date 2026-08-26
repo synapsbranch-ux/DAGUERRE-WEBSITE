@@ -318,6 +318,7 @@ export const en = {
         initiatives: "Community initiatives",
         valeurs: "Human values",
       },
+      galleryHint: "Scroll to see the work on the ground",
     },
 
     cv: {

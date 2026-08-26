@@ -332,6 +332,7 @@ export const fr = {
         initiatives: "Initiatives communautaires",
         valeurs: "Valeurs humaines",
       },
+      galleryHint: "Faites défiler pour voir le terrain",
     },
 
     cv: {

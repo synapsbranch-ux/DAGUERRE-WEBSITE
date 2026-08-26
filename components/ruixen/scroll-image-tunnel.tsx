@@ -1,5 +1,6 @@
 "use client";
 
+import Image from "next/image";
 import * as React from "react";
 import {
   motion,
@@ -11,11 +12,22 @@ import {
 } from "motion/react";
 import { cn } from "@/lib/utils";
 
+/**
+ * Ruixen UI — Scroll Image Tunnel.
+ *
+ * Adaptations Daguerre : `next/image` remplace `<img>`, avec un repli
+ * `unoptimized` par photo pour les sources distantes non déclarées à Next.
+ * Le pincement contraste/saturation à l'entrée de chaque cadre, le calage
+ * sur le défilement et le repli statique sous `prefers-reduced-motion`
+ * restent ceux du composant d'origine.
+ */
 export interface ScrollImageTunnelImage {
   /** Image URL. */
   src: string;
   /** Alt text. */
   alt: string;
+  /** Sert l'image telle quelle (source distante non déclarée à Next). */
+  unoptimized?: boolean;
 }
 
 export interface ScrollImageTunnelProps {
@@ -36,12 +48,14 @@ export interface ScrollImageTunnelProps {
 function TunnelFrame({
   src,
   alt,
+  unoptimized,
   index,
   total,
   progress,
 }: {
   src: string;
   alt: string;
+  unoptimized?: boolean;
   index: number;
   total: number;
   progress: MotionValue<number>;
@@ -75,16 +89,17 @@ function TunnelFrame({
           the same element would get silently clobbered. */}
       <motion.div
         style={{ scale, y, opacity, filter }}
-        className="h-[70%] w-full max-w-xl overflow-hidden"
+        className="relative h-[70%] w-full max-w-xl overflow-hidden"
       >
-        {/* eslint-disable-next-line @next/next/no-img-element */}
-        <img
+        <Image
           src={src}
           alt={alt}
-          loading={index === 0 ? "eager" : "lazy"}
-          decoding="async"
+          fill
+          sizes="(max-width: 640px) 100vw, 36rem"
+          priority={index === 0}
           draggable={false}
-          className="h-full w-full object-cover"
+          unoptimized={unoptimized}
+          className="object-cover"
         />
       </motion.div>
     </div>
@@ -145,14 +160,15 @@ export function ScrollImageTunnel({
         {images.map((image) => (
           <div
             key={image.src}
-            className="mx-auto aspect-[3/4] w-full max-w-xl overflow-hidden bg-background"
+            className="relative mx-auto aspect-[3/4] w-full max-w-xl overflow-hidden bg-background"
           >
-            {/* eslint-disable-next-line @next/next/no-img-element */}
-            <img
+            <Image
               src={image.src}
               alt={image.alt}
-              loading="lazy"
-              className="h-full w-full object-cover"
+              fill
+              sizes="(max-width: 640px) 100vw, 36rem"
+              unoptimized={image.unoptimized}
+              className="object-cover"
             />
           </div>
         ))}
@@ -179,6 +195,7 @@ export function ScrollImageTunnel({
               key={image.src}
               src={image.src}
               alt={image.alt}
+              unoptimized={image.unoptimized}
               index={index}
               total={images.length}
               progress={progress}
