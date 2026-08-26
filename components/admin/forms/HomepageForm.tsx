@@ -50,6 +50,7 @@ const knownSections: { key: string; label: string; description: string }[] = [
   { key: "engagement", label: "Engagement", description: "Bande sombre, initiatives et valeurs." },
   { key: "blog", label: "Blogue", description: "Articles récents." },
   { key: "expertise", label: "Compétences", description: "Groupes de compétences actives." },
+  { key: "newsletter", label: "Infolettre", description: "Bande d’inscription à l’infolettre." },
 ];
 
 const labelOf = (key: string) => knownSections.find((entry) => entry.key === key)?.label ?? key;

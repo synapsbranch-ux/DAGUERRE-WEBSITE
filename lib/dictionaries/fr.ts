@@ -7,7 +7,12 @@
  *
  * Ce module fait référence : `en.ts` doit en satisfaire le type.
  */
+import { platformFr } from "@/lib/dictionaries/platform-fr";
+
 export const fr = {
+  /** Espace client, devis, infolettre et bibliothèque — voir `platform-fr.ts`. */
+  platform: platformFr,
+
   common: {
     skipToContent: "Aller au contenu",
     menu: "Menu",

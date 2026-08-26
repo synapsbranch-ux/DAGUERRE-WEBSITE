@@ -1,6 +1,7 @@
 import { FolderGit2, Globe, Link2, Mail, Phone } from "lucide-react";
 
 import { LocaleSwitcher } from "@/components/layout/LocaleSwitcher";
+import { NewsletterSignup } from "@/components/newsletter/NewsletterSignup";
 import { legalNavKeys, mainNavKeys, secondaryNavKeys } from "@/components/layout/Navigation";
 import FooterPro from "@/components/ruixen/footer-pro";
 import { WordmarkFooter } from "@/components/ruixen/wordmark-footer";
@@ -74,6 +75,25 @@ export async function Footer({ locale, dict, populated }: FooterProps) {
 
   return (
     <div className="mt-auto">
+      {/*
+       * Bande d'inscription à l'infolettre.
+       *
+       * Posée sur le fond clair juste avant le pied de page sombre : les
+       * champs de saisie du système de design y restent lisibles, et le
+       * formulaire ne se perd pas au milieu des colonnes de liens.
+       */}
+      <section className="border-t border-border bg-[var(--plate)]">
+        <div className="mx-auto grid w-full max-w-[1440px] gap-8 px-5 py-12 sm:px-10 lg:grid-cols-2 lg:items-center lg:px-[130px]">
+          <div>
+            <p className="eyebrow">| {dict.platform.newsletter.title} |</p>
+            <h2 className="mt-3 font-heading text-2xl leading-tight sm:text-3xl">
+              {dict.platform.newsletter.lead}
+            </h2>
+          </div>
+          <NewsletterSignup dict={dict} locale={locale} source="footer" variant="inline" />
+        </div>
+      </section>
+
       <FooterPro
         className="border-white/10 bg-[var(--navy-950)] text-white"
         containerClassName="max-w-[1440px] px-5 py-14 sm:px-10 lg:px-[130px] lg:py-18"

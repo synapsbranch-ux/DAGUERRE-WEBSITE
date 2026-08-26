@@ -1,6 +1,7 @@
 import { NextResponse, type NextRequest } from "next/server";
 
 import { isLocale, locales, negotiateLocale, type Locale } from "@/lib/i18n";
+import { PATHNAME_HEADER } from "@/lib/platform/pathname";
 import { toInternalPath, toPublicPath } from "@/lib/routes";
 
 /**
@@ -47,27 +48,39 @@ export function proxy(request: NextRequest) {
     return NextResponse.redirect(url, 308);
   }
 
+  /*
+   * Le chemin public demandé est transmis aux composants serveur.
+   *
+   * Une réécriture masque l'URL réelle, et un layout n'a de toute façon pas
+   * accès au chemin courant. Sans cet en-tête, la garde de l'espace client ne
+   * pourrait pas renvoyer le visiteur sur la page qu'il demandait après sa
+   * connexion.
+   */
+  const headers = new Headers(request.headers);
+  headers.set(PATHNAME_HEADER, pathname);
+
   // Slug public traduit → chemin interne (français).
   const internal = toInternalPath(locale, rest);
   if (internal !== null) {
     const url = request.nextUrl.clone();
     url.pathname = `/${locale}/${internal}`;
-    return NextResponse.rewrite(url);
+    return NextResponse.rewrite(url, { request: { headers } });
   }
 
-  return NextResponse.next();
+  return NextResponse.next({ request: { headers } });
 }
+
 
 export const config = {
   matcher: [
     /*
      * Tout sauf :
      *  - les internes Next (`_next`) et les routes d'API
-     *  - le tableau de bord et la connexion, qui ne sont pas localisés
+     *  - le tableau de bord, qui n'est pas localisé
      *  - les fichiers de métadonnées servis à la racine
      *  - tout chemin contenant un point (fichiers statiques)
      */
-    "/((?!_next|api|admin|connexion|favicon\\.ico|icon|apple-icon|sitemap\\.xml|robots\\.txt|manifest\\.webmanifest|opengraph-image|.*\\..*).*)",
+    "/((?!_next|api|admin|favicon\\.ico|icon|apple-icon|sitemap\\.xml|robots\\.txt|manifest\\.webmanifest|opengraph-image|.*\\..*).*)",
   ],
 };
 

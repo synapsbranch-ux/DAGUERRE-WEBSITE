@@ -35,7 +35,25 @@ export type RouteKey =
   | "contact"
   | "links"
   | "legal"
-  | "privacy";
+  | "privacy"
+  // Plate-forme client — comptes, devis, ressources, infolettre.
+  | "login"
+  | "register"
+  | "forgotPassword"
+  | "resetPassword"
+  | "quote"
+  | "resources"
+  | "newsletter"
+  | "newsletterConfirm"
+  | "newsletterUnsubscribe"
+  | "portal"
+  | "portalArticles"
+  | "portalResources"
+  | "portalQuotes"
+  | "portalMessages"
+  | "portalProjects"
+  | "portalNotifications"
+  | "portalProfile";
 
 export type RouteDefinition = {
   /** Segment(s) par locale, sans barre oblique initiale. `""` pour l'accueil. */
@@ -160,6 +178,134 @@ export const routes: Record<RouteKey, RouteDefinition> = {
     inSitemap: true,
     priority: 0.2,
     changeFrequency: "yearly",
+  },
+
+  /*
+   * Plate-forme client.
+   *
+   * Les pages de compte et l'espace client sont hors sitemap : elles n'ont
+   * rien à indexer, et leur contenu dépend entièrement de la session. Le
+   * formulaire de devis et la bibliothèque publique, eux, sont des pages
+   * d'entrée à part entière.
+   */
+  login: {
+    path: { fr: "connexion", en: "login" },
+    label: { fr: "Connexion", en: "Sign in" },
+    inSitemap: false,
+    priority: 0.3,
+    changeFrequency: "yearly",
+  },
+  register: {
+    path: { fr: "inscription", en: "register" },
+    label: { fr: "Créer un compte", en: "Create an account" },
+    inSitemap: false,
+    priority: 0.3,
+    changeFrequency: "yearly",
+  },
+  forgotPassword: {
+    path: { fr: "mot-de-passe-oublie", en: "forgot-password" },
+    label: { fr: "Mot de passe oublié", en: "Forgotten password" },
+    inSitemap: false,
+    priority: 0.1,
+    changeFrequency: "yearly",
+  },
+  resetPassword: {
+    path: { fr: "nouveau-mot-de-passe", en: "reset-password" },
+    label: { fr: "Nouveau mot de passe", en: "New password" },
+    inSitemap: false,
+    priority: 0.1,
+    changeFrequency: "yearly",
+  },
+  quote: {
+    path: { fr: "devis", en: "quote" },
+    label: { fr: "Demander un devis", en: "Request a quote" },
+    inSitemap: true,
+    priority: 0.9,
+    changeFrequency: "monthly",
+  },
+  resources: {
+    path: { fr: "ressources", en: "resources" },
+    label: { fr: "Ressources", en: "Resources" },
+    inSitemap: true,
+    priority: 0.8,
+    changeFrequency: "weekly",
+  },
+  newsletter: {
+    path: { fr: "infolettre", en: "newsletter" },
+    label: { fr: "Infolettre", en: "Newsletter" },
+    inSitemap: false,
+    priority: 0.2,
+    changeFrequency: "yearly",
+  },
+  newsletterConfirm: {
+    path: { fr: "infolettre/confirmation", en: "newsletter/confirm" },
+    label: { fr: "Confirmation", en: "Confirmation" },
+    inSitemap: false,
+    priority: 0.1,
+    changeFrequency: "yearly",
+  },
+  newsletterUnsubscribe: {
+    path: { fr: "infolettre/desabonnement", en: "newsletter/unsubscribe" },
+    label: { fr: "Désabonnement", en: "Unsubscribe" },
+    inSitemap: false,
+    priority: 0.1,
+    changeFrequency: "yearly",
+  },
+  portal: {
+    path: { fr: "espace-client", en: "client" },
+    label: { fr: "Espace client", en: "Client portal" },
+    inSitemap: false,
+    priority: 0.3,
+    changeFrequency: "daily",
+  },
+  portalArticles: {
+    path: { fr: "espace-client/articles", en: "client/articles" },
+    label: { fr: "Articles", en: "Articles" },
+    inSitemap: false,
+    priority: 0.3,
+    changeFrequency: "daily",
+  },
+  portalResources: {
+    path: { fr: "espace-client/ressources", en: "client/resources" },
+    label: { fr: "Ressources", en: "Resources" },
+    inSitemap: false,
+    priority: 0.3,
+    changeFrequency: "daily",
+  },
+  portalQuotes: {
+    path: { fr: "espace-client/devis", en: "client/quotes" },
+    label: { fr: "Devis", en: "Quotes" },
+    inSitemap: false,
+    priority: 0.3,
+    changeFrequency: "daily",
+  },
+  portalMessages: {
+    path: { fr: "espace-client/messages", en: "client/messages" },
+    label: { fr: "Messages", en: "Messages" },
+    inSitemap: false,
+    priority: 0.3,
+    changeFrequency: "daily",
+  },
+  portalProjects: {
+    path: { fr: "espace-client/projets", en: "client/projects" },
+    label: { fr: "Projets", en: "Projects" },
+    inSitemap: false,
+    priority: 0.3,
+    changeFrequency: "daily",
+  },
+  portalNotifications: {
+    path: { fr: "espace-client/notifications", en: "client/notifications" },
+    label: { fr: "Notifications", en: "Notifications" },
+    inSitemap: false,
+    priority: 0.3,
+    changeFrequency: "daily",
+  },
+  portalProfile: {
+    path: { fr: "espace-client/profil", en: "client/profile" },
+    label: { fr: "Profil", en: "Profile" },
+    inSitemap: false,
+    priority: 0.3,
+    changeFrequency: "monthly",
   },
 };
 

@@ -1,6 +1,8 @@
 import type { Metadata } from "next";
 import Link from "next/link";
 
+import { NewsletterSignup } from "@/components/newsletter/NewsletterSignup";
+
 import { BlogCoverflow } from "@/components/sections/BlogCoverflow";
 import { FeaturedArticlePanel } from "@/components/sections/FeaturedArticlePanel";
 import { PostRow } from "@/components/sections/PostRow";
@@ -146,6 +148,16 @@ export default async function BlogPage({ searchParams }: PageProps<"/[locale]/bl
               </EmptyHeader>
             </Empty>
           )}
+        </Section>
+
+        {/* Point d'entrée d'abonnement là où le lecteur vient de lire. */}
+        <Section
+          title={dict.platform.newsletter.title}
+          description={dict.platform.newsletter.lead}
+        >
+          <div className="max-w-xl">
+            <NewsletterSignup dict={dict} locale={locale} source="blog" />
+          </div>
         </Section>
 
         <Section title={labels.categories}>
