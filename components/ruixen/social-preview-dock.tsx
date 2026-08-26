@@ -238,6 +238,8 @@ interface HeatmapTip {
   x: number;
   y: number;
   text: string;
+  /** Largeur de la grille au moment du survol — évite de lire le ref au rendu. */
+  gridWidth: number;
 }
 
 /** Half the widest tooltip line, near enough. See the note at the call site. */
@@ -253,7 +255,6 @@ function ContributionHeatmap({
   /* One tooltip node driven by delegation, not 364 hover handlers and 364
      mounted chips. The tile's own offsets are enough to place it. */
   const [tip, setTip] = React.useState<HeatmapTip | null>(null);
-  const gridRef = React.useRef<HTMLDivElement>(null);
 
   const trackTip = (e: React.MouseEvent<HTMLDivElement>) => {
     const cell = (e.target as HTMLElement).closest<HTMLElement>("[data-day]");
@@ -263,6 +264,7 @@ function ContributionHeatmap({
       x: cell.offsetLeft + cell.offsetWidth / 2,
       y: cell.offsetTop,
       text: `${day.count} contribution${day.count === 1 ? "" : "s"} on ${formatDay(day.date)}`,
+      gridWidth: e.currentTarget.offsetWidth,
     });
   };
 
@@ -271,7 +273,6 @@ function ContributionHeatmap({
       {/* One image to assistive tech: 364 tiles announced one by one is noise,
           and the total above already carries the information. */}
       <div
-        ref={gridRef}
         role="img"
         aria-label={label}
         className="grid grid-flow-col grid-rows-7 gap-[2px]"
@@ -298,10 +299,7 @@ function ContributionHeatmap({
                rather than measured, to keep this a single render with no
                flicker. Only matters within ~half a tooltip of either edge —
                measure with a ref if the copy stops being one short line. */
-            left: Math.min(
-              Math.max(tip.x, TIP_HALF),
-              (gridRef.current?.offsetWidth ?? 0) - TIP_HALF,
-            ),
+            left: Math.min(Math.max(tip.x, TIP_HALF), tip.gridWidth - TIP_HALF),
             top: tip.y,
           }}
           className="pointer-events-none absolute z-10 -translate-x-1/2 -translate-y-[calc(100%+6px)] whitespace-nowrap rounded-md bg-primary px-2 py-1 text-[11px] font-medium leading-none text-primary-foreground shadow-md"
@@ -820,9 +818,10 @@ export function SocialPreviewDock({
   } | null>(null);
   const [box, setBox] = React.useState({ x: 0, width: 0, height: 0 });
   /* First open jumps into place. Springing from the previous card's box would
-     otherwise fly the panel in from wherever it last was. */
-  const openRef = React.useRef(false);
-  const appearing = !openRef.current;
+     otherwise fly the panel in from wherever it last was. State, not a ref
+     read at render time: reading a ref during render is unsafe under
+     concurrent rendering. */
+  const [appearing, setAppearing] = React.useState(true);
 
   /* Measure before paint, so the panel never shows a frame at the wrong size.
      The card is absolutely positioned inside an overflow-hidden panel, so its
@@ -852,11 +851,11 @@ export function SocialPreviewDock({
     );
 
     setBox({ x, width, height });
-    openRef.current = true;
+    setAppearing(false);
   }, [active, github]);
 
   const hide = React.useCallback(() => {
-    openRef.current = false;
+    setAppearing(true);
     setActive(null);
   }, []);
 

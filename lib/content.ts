@@ -304,6 +304,56 @@ export async function getProjectFacets(): Promise<{
   };
 }
 
+/**
+ * Projets apparentés — même schéma que `getRelatedPosts` : d'abord par
+ * catégorie ou technologie partagée, puis en repli les plus récents.
+ * `limit + 1` couvre le cas où le projet courant se trouve dans le repli.
+ */
+export async function getRelatedProjects(
+  project: Project,
+  locale: Locale = defaultLocale,
+  limit = 3,
+): Promise<Project[]> {
+  const taxonomies = [...project.categories, ...project.technologies];
+  const exclude = { "slug.fr": { $ne: project.slugs.fr } };
+
+  if (taxonomies.length > 0) {
+    const related = await find(
+      ProjectModel,
+      {
+        ...published(),
+        ...exclude,
+        $or: [{ categories: { $in: project.categories } }, { technologies: { $in: project.technologies } }],
+      },
+      { year: -1, publishedAt: -1 },
+      limit,
+    );
+    if (related.length > 0) return related.map((doc) => toProject(doc, locale));
+  }
+
+  return (await find(ProjectModel, { ...published(), ...exclude }, { year: -1, publishedAt: -1 }, limit)).map(
+    (doc) => toProject(doc, locale),
+  );
+}
+
+/**
+ * Projet précédent / suivant dans l'ordre de tri du portfolio (année, puis
+ * date de parution) — pour la navigation de bas de page d'une réalisation.
+ */
+export async function getAdjacentProjects(
+  project: Project,
+  locale: Locale = defaultLocale,
+): Promise<{ previous: Project | null; next: Project | null }> {
+  const all = await getProjects(locale);
+  const index = all.findIndex((entry) => entry.slug === project.slug || entry.slugs.fr === project.slugs.fr);
+  if (index === -1) return { previous: null, next: null };
+
+  return {
+    previous: all[index + 1] ?? null,
+    next: all[index - 1] ?? null,
+  };
+}
+
 /* ------------------------------------------------------------------ */
 /* Articles                                                            */
 /* ------------------------------------------------------------------ */

@@ -1,9 +1,19 @@
 "use client";
 
+import Image from "next/image";
 import * as React from "react";
 import { ChevronLeft, ChevronRight } from "lucide-react";
 
 import { cn } from "@/lib/utils";
+
+/**
+ * Ruixen UI — Coverflow Carousel.
+ *
+ * Adaptations Daguerre : `next/image` remplace `<img>`, avec un repli
+ * `unoptimized` par diapositive pour les sources distantes non déclarées à
+ * Next, et `onSelectedChange` expose la diapositive centrée — le composant
+ * d'origine ne suivait cet état qu'en interne.
+ */
 
 const useIsoLayoutEffect =
   typeof window !== "undefined" ? React.useLayoutEffect : React.useEffect;
@@ -14,6 +24,8 @@ export interface CoverflowSlide {
   title?: string;
   subtitle?: string;
   meta?: { label: string; value: string }[];
+  /** Sert l'image telle quelle (source distante non déclarée à Next). */
+  unoptimized?: boolean;
 }
 
 export interface CoverflowCarouselProps {
@@ -40,6 +52,8 @@ export interface CoverflowCarouselProps {
   label?: string;
   className?: string;
   cardClassName?: string;
+  /** Fires when the centred slide changes — by settle, drag or arrow. */
+  onSelectedChange?: (index: number) => void;
 }
 
 export function CoverflowCarousel({
@@ -58,6 +72,7 @@ export function CoverflowCarousel({
   label = "Cover carousel",
   className,
   cardClassName,
+  onSelectedChange,
 }: CoverflowCarouselProps) {
   const count = slides.length;
 
@@ -78,7 +93,14 @@ export function CoverflowCarousel({
     t: number;
   } | null>(null);
 
-  const [selected, setSelected] = React.useState(0);
+  const [selected, setSelectedState] = React.useState(0);
+  const setSelected = React.useCallback(
+    (index: number) => {
+      setSelectedState(index);
+      onSelectedChange?.(index);
+    },
+    [onSelectedChange],
+  );
 
   /** Nearest whole card, folded back into 0..count-1. */
   const indexAt = React.useCallback(
@@ -147,7 +169,7 @@ export function CoverflowCarousel({
       };
       rafRef.current = requestAnimationFrame(step);
     },
-    [indexAt, paint],
+    [indexAt, paint, setSelected],
   );
 
   const clamp = React.useCallback(
@@ -298,12 +320,14 @@ export function CoverflowCarousel({
                 )}
                 style={{ width: "var(--cf-card)" }}
               >
-                {/* eslint-disable-next-line @next/next/no-img-element */}
-                <img
+                <Image
                   src={slide.src}
                   alt={slide.alt}
+                  fill
+                  sizes={cardWidth}
                   draggable={false}
-                  className="h-full w-full select-none object-cover"
+                  unoptimized={slide.unoptimized}
+                  className="select-none object-cover"
                 />
               </div>
             ))}

@@ -3,15 +3,20 @@ import { notFound } from "next/navigation";
 import ReactMarkdown from "react-markdown";
 import remarkGfm from "remark-gfm";
 
+import { ArrowLeft, ArrowRight } from "lucide-react";
+import Link from "next/link";
+
 import { EditorialImage } from "@/components/motion/EditorialImage";
 import { ContactCTA } from "@/components/sections/ContactCTA";
+import { ProjectCard } from "@/components/sections/ProjectCard";
 import { JsonLd } from "@/components/seo/JsonLd";
 import { Badge } from "@/components/ui/badge";
 import { Button } from "@/components/ui/button";
 import { Container } from "@/components/ui/Container";
 import { PageHeader } from "@/components/ui/PageHeader";
 import { Section } from "@/components/ui/Section";
-import { getProjectBySlug, getProjects } from "@/lib/content";
+import { getAdjacentProjects, getProjectBySlug, getProjects, getRelatedProjects } from "@/lib/content";
+import { href } from "@/lib/routes";
 import { getDictionary, getDictionaryFor, getLocale } from "@/lib/dictionaries";
 import { isLocale } from "@/lib/i18n";
 import { projectSchema } from "@/lib/schema";
@@ -56,6 +61,11 @@ export default async function RealisationPage({
 
   // Brouillon, archivé, planifié ou inconnu : la page n'existe pas.
   if (!project) notFound();
+
+  const [related, adjacent] = await Promise.all([
+    getRelatedProjects(project, locale),
+    getAdjacentProjects(project, locale),
+  ]);
 
   const detail = dict.pages.projects.detail;
   const labels = dict.pages.projects;
@@ -172,7 +182,59 @@ export default async function RealisationPage({
             </div>
           </Section>
         ) : null}
+
+        {related.length > 0 ? (
+          <Section title={detail.sections.related}>
+            <ul className="grid gap-6 sm:grid-cols-2 lg:grid-cols-3">
+              {related.map((entry) => (
+                <li key={entry.slug}>
+                  <ProjectCard project={entry} locale={locale} sizes="(max-width: 640px) 100vw, (max-width: 1024px) 50vw, 33vw" />
+                </li>
+              ))}
+            </ul>
+          </Section>
+        ) : null}
       </div>
+
+      {adjacent.previous || adjacent.next ? (
+        <nav
+          aria-label={detail.sections.pagination}
+          className="mt-4 grid gap-4 border-t border-border py-8 sm:grid-cols-2"
+        >
+          {adjacent.previous ? (
+            <Link
+              href={href("projects", locale, adjacent.previous.slug)}
+              className="group flex items-center gap-3 rounded-2xl border border-border p-5 transition-colors hover:border-[var(--copper)]/55"
+            >
+              <ArrowLeft className="size-4 shrink-0 text-[var(--copper-deep)] transition-transform group-hover:-translate-x-1" aria-hidden="true" />
+              <span>
+                <span className="block text-[10px] uppercase tracking-[0.14em] text-muted-foreground">
+                  {detail.sections.previous}
+                </span>
+                <span className="mt-1 block font-heading text-lg leading-snug">{adjacent.previous.title}</span>
+              </span>
+            </Link>
+          ) : (
+            <span aria-hidden="true" />
+          )}
+          {adjacent.next ? (
+            <Link
+              href={href("projects", locale, adjacent.next.slug)}
+              className="group flex items-center justify-end gap-3 rounded-2xl border border-border p-5 text-right transition-colors hover:border-[var(--copper)]/55 sm:col-start-2"
+            >
+              <span>
+                <span className="block text-[10px] uppercase tracking-[0.14em] text-muted-foreground">
+                  {detail.sections.next}
+                </span>
+                <span className="mt-1 block font-heading text-lg leading-snug">{adjacent.next.title}</span>
+              </span>
+              <ArrowRight className="size-4 shrink-0 text-[var(--copper-deep)] transition-transform group-hover:translate-x-1" aria-hidden="true" />
+            </Link>
+          ) : (
+            <span aria-hidden="true" />
+          )}
+        </nav>
+      ) : null}
 
       <ContactCTA locale={locale} dict={dict} />
     </Container>

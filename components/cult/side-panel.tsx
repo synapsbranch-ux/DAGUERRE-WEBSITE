@@ -37,7 +37,7 @@ export const SidePanel = forwardRef<HTMLDivElement, PanelContainerProps>(
     const [measureRef, bounds] = useMeasure()
 
     return (
-      <ResizablePanel>
+      <ResizablePanel ref={ref}>
         <motion.div
           className={cn(
             "bg-neutral-900 rounded-r-[44px] w-[160px] md:w-[260px]",

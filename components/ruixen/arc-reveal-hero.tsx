@@ -1,14 +1,7 @@
 "use client";
 
 import * as React from "react";
-import {
-  animate,
-  AnimatePresence,
-  motion,
-  useMotionValue,
-  useReducedMotion,
-  useTransform,
-} from "motion/react";
+import { animate, AnimatePresence, motion, useMotionValue, useTransform } from "motion/react";
 import { cn } from "@/lib/utils";
 
 /* ── types ───────────────────────────────────────────────────── */
@@ -75,17 +68,36 @@ export function ArcRevealHero({
   storageKey,
   children,
 }: ArcRevealHeroProps) {
-  const prefersReducedMotion = useReducedMotion();
-
   /*
    * Adaptation Daguerre : le rideau n'est armé qu'après l'hydratation.
    * Rendu côté serveur, il masquerait le titre dans le HTML livré — et un
-   * visiteur sans JavaScript resterait devant un écran plein.
+   * visiteur sans JavaScript resterait devant un écran plein. `useSyncExternalStore`
+   * plutôt qu'un `setState` dans un effet : la bascule ne dépend d'aucun état
+   * React, seulement du fait d'avoir atteint le client. Pendant l'hydratation,
+   * React relit `getServerSnapshot` — la valeur reste donc fausse jusqu'à ce
+   * que l'hydratation soit réellement terminée, sans écart avec le HTML livré.
    */
-  const [armed, setArmed] = React.useState(false);
-  React.useEffect(() => setArmed(true), []);
+  const armed = React.useSyncExternalStore(
+    () => () => {},
+    () => true,
+    () => false,
+  );
 
-  const [phase, setPhase] = React.useState<Phase>("intro");
+  // Repli immédiat + suppression de la reprise : lu une seule fois, à
+  // l'initialisation de l'état, plutôt que corrigé après coup depuis un
+  // effet — aucun rendu supplémentaire n'est nécessaire pour s'en écarter.
+  const [phase, setPhase] = React.useState<Phase>(() => {
+    if (typeof window === "undefined") return "intro";
+    if (window.matchMedia("(prefers-reduced-motion: reduce)").matches) return "done";
+    if (storageKey) {
+      try {
+        if (window.sessionStorage.getItem(storageKey) === "done") return "done";
+      } catch {
+        /* sessionStorage can throw in private mode — repli sur "intro" */
+      }
+    }
+    return "intro";
+  });
   const [index, setIndex] = React.useState(0);
 
   // Drive the arc shape from a single 0→1 progress.
@@ -99,23 +111,6 @@ export function ArcRevealHero({
     const control = edge + 25;
     return `M 0 ${edge} Q 50 ${control} 100 ${edge} L 100 110 L 0 110 Z`;
   });
-
-  // Honor reduced-motion + replay-suppression on mount.
-  React.useEffect(() => {
-    if (prefersReducedMotion) {
-      setPhase("done");
-      return;
-    }
-    if (storageKey && typeof window !== "undefined") {
-      try {
-        if (window.sessionStorage.getItem(storageKey) === "done") {
-          setPhase("done");
-        }
-      } catch {
-        /* sessionStorage can throw in private mode — fall through */
-      }
-    }
-  }, [prefersReducedMotion, storageKey]);
 
   // Greeting cycle.
   React.useEffect(() => {

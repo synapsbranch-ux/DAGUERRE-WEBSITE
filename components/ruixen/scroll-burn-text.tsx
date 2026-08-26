@@ -101,9 +101,12 @@ export function ScrollBurnText({
   const count = sections.length;
 
   // Read inside the scroll handler so retyping the copy does not tear the
-  // listener down and rebuild it.
+  // listener down and rebuild it. Written from an effect, not during render:
+  // mutating a ref while rendering is unsafe under concurrent rendering.
   const total = React.useRef(count);
-  total.current = count;
+  React.useEffect(() => {
+    total.current = count;
+  }, [count]);
 
   React.useEffect(() => {
     if (prefersReducedMotion) return;

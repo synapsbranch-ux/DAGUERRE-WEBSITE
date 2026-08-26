@@ -1,9 +1,24 @@
+import { FileQuestion } from "lucide-react";
 import ReactMarkdown from "react-markdown";
 import remarkGfm from "remark-gfm";
 
 import { EditorialImage } from "@/components/motion/EditorialImage";
+import {
+  DitherImageContent,
+  DitherImageFrame,
+  DitherImageOverlay,
+  DitherImageReveal,
+} from "@/components/cult/dither-image";
 import { Reveal } from "@/components/motion/Reveal";
 import { Container } from "@/components/ui/Container";
+import {
+  Empty,
+  EmptyDescription,
+  EmptyHeader,
+  EmptyMedia,
+  EmptyTitle,
+} from "@/components/ui/empty";
+import { isUnconfiguredRemoteImage, resolveKnownImageSource } from "@/lib/media/assets";
 import type {
   PageCertification,
   PageEntry,
@@ -75,13 +90,34 @@ export function EditorialTimeline({ title, entries }: { title: string; entries: 
 }
 
 /** Sections illustrées : un bloc texte + image, alternés. */
+/**
+ * Ancre stable d'une section éditoriale.
+ *
+ * Le rail de chapitres (Ruixen « Chapter Scrubber ») s'y rend : les deux
+ * doivent dériver l'identifiant de la même façon.
+ */
+export function sectionAnchorId(title: string, index: number): string {
+  const slug = title
+    .normalize("NFD")
+    .replace(/[\u0300-\u036f]/g, "")
+    .toLowerCase()
+    .replace(/[^a-z0-9]+/g, "-")
+    .replace(/^-+|-+$/g, "");
+
+  return slug ? `section-${slug}` : `section-${index + 1}`;
+}
+
 export function EditorialSections({ sections }: { sections: PageSection[] }) {
   if (sections.length === 0) return null;
 
   return (
     <div className="divide-y divide-border">
       {sections.map((section, index) => (
-        <section key={`${section.title}-${index}`} className="py-14">
+        <section
+          key={`${section.title}-${index}`}
+          id={sectionAnchorId(section.title, index)}
+          className="scroll-mt-28 py-14"
+        >
           <div
             className={`grid items-center gap-10 lg:grid-cols-2 lg:gap-16 ${
               index % 2 === 1 ? "lg:[&>*:first-child]:order-2" : ""
@@ -247,16 +283,26 @@ export function EditorialGallery({ title, images }: { title: string; images: str
  * Sans page enregistrée, l'appelant affiche son propre état vide : ce
  * composant ne fabrique jamais de contenu de remplacement.
  */
+/**
+ * En-tête d'une page éditoriale.
+ *
+ * `dithered` fait passer la photographie d'ouverture par Cult UI
+ * « Dither Image Reveal » : le tramage tient la moitié droite du cadre et la
+ * photographie reste nette là où le regard se pose. Réservé aux ouvertures —
+ * appliqué partout, le motif cesserait d'être une signature.
+ */
 export function EditorialHeader({
   eyebrow,
   title,
   subtitle,
   image,
+  dithered = false,
 }: {
   eyebrow: string;
   title: string;
   subtitle?: string;
   image?: string;
+  dithered?: boolean;
 }) {
   return (
     <header className="py-14">
@@ -267,13 +313,17 @@ export function EditorialHeader({
           <p className="mt-6 max-w-[62ch] text-lg leading-8 text-muted-foreground">{subtitle}</p>
         ) : null}
         {image ? (
-          <EditorialImage
-            src={image}
-            alt=""
-            className="mt-10 aspect-[21/9] min-h-0 rounded-2xl border-0"
-            sizes="(max-width: 1024px) 100vw, 1180px"
-            priority
-          />
+          dithered ? (
+            <DitheredHeaderImage src={image} />
+          ) : (
+            <EditorialImage
+              src={image}
+              alt=""
+              className="mt-10 aspect-[21/9] min-h-0 rounded-2xl border-0"
+              sizes="(max-width: 1024px) 100vw, 1180px"
+              priority
+            />
+          )
         ) : null}
       </Container>
     </header>
@@ -281,11 +331,65 @@ export function EditorialHeader({
 }
 
 /** État vide honnête d'une page dont le contenu n'a pas encore été saisi. */
+/**
+ * État vide d'une page éditoriale dont le contenu n'a pas encore été saisi.
+ *
+ * shadcn `Empty` : le titre reste un vrai `<h1>` (c'est la page), le reste
+ * suit le registre.
+ */
 export function EditorialEmpty({ title, message }: { title: string; message: string }) {
   return (
-    <div className="py-20">
-      <h1 className="text-4xl">{title}</h1>
-      <p className="mt-4 max-w-[60ch] text-muted-foreground">{message}</p>
-    </div>
+    <Empty className="py-20">
+      <EmptyHeader>
+        <EmptyMedia variant="icon">
+          <FileQuestion aria-hidden="true" />
+        </EmptyMedia>
+        <EmptyTitle>
+          <h1 className="text-4xl font-heading">{title}</h1>
+        </EmptyTitle>
+        <EmptyDescription className="max-w-[60ch]">{message}</EmptyDescription>
+      </EmptyHeader>
+    </Empty>
+  );
+}
+
+/** Photographie d'ouverture tramée — Cult UI « Dither Image Reveal ». */
+function DitheredHeaderImage({ src }: { src: string }) {
+  const source = resolveKnownImageSource(src);
+  const unoptimized = isUnconfiguredRemoteImage(source);
+
+  return (
+    <DitherImageReveal className="mt-10 aspect-[21/9] w-full overflow-hidden rounded-2xl">
+      <DitherImageFrame
+        className="absolute inset-0 size-full"
+        size="sm"
+        grayscale={0.6}
+        contrast={114}
+        opacity={0.5}
+      >
+        <DitherImageContent
+          src={source}
+          alt=""
+          fill
+          sizes="(max-width: 1024px) 100vw, 1180px"
+          quality={75}
+          unoptimized={unoptimized}
+          className="object-cover"
+          preload
+        />
+      </DitherImageFrame>
+      <DitherImageOverlay
+        src={source}
+        alt=""
+        direction="r"
+        from={8}
+        to={72}
+        fill
+        sizes="(max-width: 1024px) 100vw, 1180px"
+        quality={75}
+        unoptimized={unoptimized}
+        className="object-cover"
+      />
+    </DitherImageReveal>
   );
 }

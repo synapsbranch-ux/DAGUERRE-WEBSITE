@@ -23,8 +23,10 @@ import {
   forwardRef,
   useCallback,
   useEffect,
+  useMemo,
   useRef,
   useState,
+  useSyncExternalStore,
   type MouseEvent,
 } from "react"
 import Image, { type StaticImageData } from "next/image"
@@ -34,6 +36,7 @@ import {
   motion,
   useMotionTemplate,
   useMotionValue,
+  useReducedMotion,
   type MotionStyle,
   type MotionValue,
   type Variants,
@@ -68,7 +71,17 @@ interface ImageSet {
   alt: string
 }
 
+/**
+ * Cult UI — Feature Carousel.
+ *
+ * Adaptations Daguerre : les quatre étapes (« Feature 1 … 4 ») deviennent une
+ * propriété alimentée par la collection Service du CMS, et le titre courant
+ * est celui du service affiché. Les quatre mises en page, la cadence et le
+ * halo suivant le pointeur restent ceux du composant.
+ */
 interface FeatureCarouselProps extends CardProps {
+  /** Quatre étapes, dans l'ordre. Alimenté par le CMS. */
+  steps?: readonly Step[];
   step1img1Class?: string
   step1img2Class?: string
   step2img1Class?: string
@@ -97,7 +110,7 @@ interface Step {
 // Constants
 const TOTAL_STEPS = 4
 
-const steps = [
+const fallbackSteps: readonly Step[] = [
   {
     id: "1",
     name: "Step 1",
@@ -122,7 +135,7 @@ const steps = [
     title: "Feature 4",
     description: "Feature 4 description",
   },
-] as const
+]
 
 /**
  * Animation presets for reusable motion configurations.
@@ -184,27 +197,30 @@ function useNumberCycler(
   const [currentNumber, setCurrentNumber] = useState(0)
   const [isManualInteraction, setIsManualInteraction] = useState(false)
   const timerRef = useRef<NodeJS.Timeout | null>(null)
+  const reduceMotion = useReducedMotion()
 
-  // Setup timer function
-  const setupTimer = useCallback(() => {
-    console.log("Setting up timer")
+  // Setup timer function — named so the recursive call below resolves
+  // directly rather than through the outer `const` binding.
+  const setupTimer = useCallback(function armTimer() {
     // Clear any existing timer
     if (timerRef.current) {
       clearTimeout(timerRef.current)
     }
 
+    // L'avance automatique s'arrête sous `prefers-reduced-motion` : le
+    // carrousel n'avance plus qu'au clic.
+    if (reduceMotion) return
+
     timerRef.current = setTimeout(() => {
-      console.log("Timer triggered, advancing to next step")
       setCurrentNumber((prev) => (prev + 1) % totalSteps)
       setIsManualInteraction(false)
       // Recursively setup next timer
-      setupTimer()
+      armTimer()
     }, interval)
-  }, [interval, totalSteps])
+  }, [interval, totalSteps, reduceMotion])
 
   // Handle manual increment
   const increment = useCallback(() => {
-    console.log("Manual increment triggered")
     setIsManualInteraction(true)
     setCurrentNumber((prev) => (prev + 1) % totalSteps)
 
@@ -214,25 +230,14 @@ function useNumberCycler(
 
   // Initial timer setup and cleanup
   useEffect(() => {
-    console.log("Initial timer setup")
     setupTimer()
 
     return () => {
-      console.log("Cleaning up timer")
       if (timerRef.current) {
         clearTimeout(timerRef.current)
       }
     }
   }, [setupTimer])
-
-  // Debug logging
-  useEffect(() => {
-    console.log("Current state:", {
-      currentNumber,
-      isManualInteraction,
-      hasTimer: !!timerRef.current,
-    })
-  }, [currentNumber, isManualInteraction])
 
   return {
     currentNumber,
@@ -241,25 +246,36 @@ function useNumberCycler(
   }
 }
 
+const MOBILE_USER_AGENT =
+  /Android|BlackBerry|iPhone|iPad|iPod|Opera Mini|IEMobile|WPDesktop/i
+
+/** Narrow viewport on a touch-class device — reactive to viewport resize. */
 function useIsMobile() {
-  const [isMobile, setIsMobile] = useState(false)
+  const isTouchDevice = useMemo(
+    () =>
+      typeof navigator !== "undefined" &&
+      MOBILE_USER_AGENT.test(navigator.userAgent),
+    []
+  )
 
-  useEffect(() => {
-    const userAgent = navigator.userAgent
-    const isSmall = window.matchMedia("(max-width: 768px)").matches
-    const isMobile = Boolean(
-      /Android|BlackBerry|iPhone|iPad|iPod|Opera Mini|IEMobile|WPDesktop/i.exec(
-        userAgent
-      )
-    )
-
-    const isDev = process.env.NODE_ENV !== "production"
-    if (isDev) setIsMobile(isSmall || isMobile)
-
-    setIsMobile(isSmall && isMobile)
+  const subscribe = useCallback((onChange: () => void) => {
+    const query = window.matchMedia("(max-width: 768px)")
+    query.addEventListener("change", onChange)
+    return () => query.removeEventListener("change", onChange)
   }, [])
+  const getSnapshot = useCallback(
+    () => window.matchMedia("(max-width: 768px)").matches,
+    []
+  )
+  const getServerSnapshot = useCallback(() => false, [])
 
-  return isMobile
+  const isNarrowViewport = useSyncExternalStore(
+    subscribe,
+    getSnapshot,
+    getServerSnapshot
+  )
+
+  return isTouchDevice && isNarrowViewport
 }
 
 // Components
@@ -288,10 +304,10 @@ const stepVariants: Variants = {
   },
 }
 
-const StepImage = forwardRef<
-  HTMLImageElement,
-  StepImageProps & { [key: string]: any }
->(
+type StepImageAllProps = StepImageProps &
+  Omit<React.ComponentProps<typeof Image>, keyof StepImageProps>
+
+const StepImage = forwardRef<HTMLImageElement, StepImageAllProps>(
   (
     { src, alt, className, style, width = 1200, height = 630, ...props },
     ref
@@ -351,11 +367,19 @@ function FeatureCard({
   bgClass,
   children,
   step,
+  steps,
 }: CardProps & {
   children: React.ReactNode
   step: number
+  steps: readonly Step[]
 }) {
-  const [mounted, setMounted] = useState(false)
+  // Vrai uniquement après l'hydratation — évite l'écart serveur/client sans
+  // passer par un `setState` dans un effet.
+  const mounted = useSyncExternalStore(
+    () => () => {},
+    () => true,
+    () => false
+  )
   const mouseX = useMotionValue(0)
   const mouseY = useMotionValue(0)
   const isMobile = useIsMobile()
@@ -366,10 +390,6 @@ function FeatureCard({
     mouseX.set(clientX - left)
     mouseY.set(clientY - top)
   }
-
-  useEffect(() => {
-    setMounted(true)
-  }, [])
 
   return (
     <motion.div
@@ -412,7 +432,7 @@ function FeatureCard({
                   ease: [0.23, 1, 0.32, 1],
                 }}
               >
-                {steps[step].title}
+                {steps[step]?.title}
               </motion.h2>
               <motion.div
                 initial={{ opacity: 0, x: -20 }}
@@ -424,7 +444,7 @@ function FeatureCard({
                 }}
               >
                 <p className="text-sm leading-5 text-neutral-300 sm:text-base sm:leading-5 dark:text-zinc-400">
-                  <span className="text-balance">{steps[step].description}</span>
+                  <span className="text-balance">{steps[step]?.description}</span>
                 </p>
               </motion.div>
             </motion.div>
@@ -562,6 +582,7 @@ const defaultClasses = {
  */
 export function FeatureCarousel({
   image,
+  steps: stepsProp,
   step1img1Class = defaultClasses.step1img1,
   step1img2Class = defaultClasses.step1img2,
   step2img1Class = defaultClasses.step2img1,
@@ -570,7 +591,8 @@ export function FeatureCarousel({
   step4imgClass = defaultClasses.step4img,
   ...props
 }: FeatureCarouselProps) {
-  const { currentNumber: step, increment } = useNumberCycler()
+  const steps = stepsProp ?? fallbackSteps
+  const { currentNumber: step, increment } = useNumberCycler(steps.length)
   const [isAnimating, setIsAnimating] = useState(false)
 
   const handleIncrement = () => {
@@ -684,8 +706,11 @@ export function FeatureCarousel({
             >
               <AnimatedStepImage
                 alt={image.alt}
-                className="pointer-events-none top-[50%] w-[90%] overflow-hidden rounded-2xl border border-neutral-100/10 md:left-[35px] md:top-[30%] md:w-full dark:border-zinc-700"
-                src="/cults.png"
+                className={clsx(
+                  step4imgClass,
+                  "pointer-events-none top-[50%] w-[90%] overflow-hidden rounded-2xl border border-neutral-100/10 md:left-[35px] md:top-[30%] md:w-full dark:border-zinc-700"
+                )}
+                src={image.step4light}
                 preset="fadeInScale"
                 delay={0.1}
               />
@@ -710,7 +735,7 @@ export function FeatureCarousel({
   }
 
   return (
-    <FeatureCard {...props} step={step}>
+    <FeatureCard {...props} step={step} steps={steps}>
       {renderStepContent()}
       <motion.div
         initial={{ opacity: 0 }}

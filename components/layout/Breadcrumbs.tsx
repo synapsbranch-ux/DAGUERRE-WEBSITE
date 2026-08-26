@@ -1,8 +1,17 @@
 "use client";
 
 import Link from "next/link";
+import * as React from "react";
 import { usePathname } from "next/navigation";
 
+import {
+  Breadcrumb,
+  BreadcrumbItem,
+  BreadcrumbLink,
+  BreadcrumbList,
+  BreadcrumbPage,
+  BreadcrumbSeparator,
+} from "@/components/ui/breadcrumb";
 import { JsonLd } from "@/components/seo/JsonLd";
 import { Container } from "@/components/ui/Container";
 import type { Locale } from "@/lib/i18n";
@@ -42,7 +51,8 @@ type BreadcrumbsProps = {
 };
 
 /**
- * Fil d'Ariane global, affiché sur toutes les pages sauf l'accueil.
+ * Fil d'Ariane global — primitive shadcn — affiché sur toutes les pages sauf
+ * l'accueil.
  *
  * Il alimente le `BreadcrumbList` schema.org, que Google utilise pour afficher
  * le chemin du site dans ses résultats. Les segments intermédiaires qui ne
@@ -59,26 +69,32 @@ export function Breadcrumbs({ locale, label }: BreadcrumbsProps) {
   return (
     <Container>
       <JsonLd data={breadcrumbSchema(crumbs.map(({ name, path }) => ({ name, path })))} />
-      <nav aria-label={label} className="pt-6">
-        <ol className="flex flex-wrap items-center gap-x-2 gap-y-1 text-[11px] uppercase tracking-[0.1em] text-muted-foreground">
+      <Breadcrumb aria-label={label} className="pt-6 text-[11px] uppercase tracking-[0.1em]">
+        <BreadcrumbList className="gap-x-2 gap-y-1 text-muted-foreground">
           {crumbs.map((crumb, index) => {
             const isLast = index === crumbs.length - 1;
 
             return (
-              <li key={crumb.path} className="flex items-center gap-2">
-                {index > 0 ? <span aria-hidden="true">·</span> : null}
-                {crumb.isLink ? (
-                  <Link href={crumb.path} className="transition-colors hover:text-foreground">
-                    {crumb.name}
-                  </Link>
-                ) : (
-                  <span aria-current={isLast ? "page" : undefined}>{crumb.name}</span>
-                )}
-              </li>
+              <React.Fragment key={crumb.path}>
+                {index > 0 ? <BreadcrumbSeparator className="[&>svg]:size-3" /> : null}
+                <BreadcrumbItem>
+                  {crumb.isLink ? (
+                    <BreadcrumbLink asChild>
+                      <Link href={crumb.path} className="hover:text-foreground">
+                        {crumb.name}
+                      </Link>
+                    </BreadcrumbLink>
+                  ) : isLast ? (
+                    <BreadcrumbPage>{crumb.name}</BreadcrumbPage>
+                  ) : (
+                    <span className="text-muted-foreground">{crumb.name}</span>
+                  )}
+                </BreadcrumbItem>
+              </React.Fragment>
             );
           })}
-        </ol>
-      </nav>
+        </BreadcrumbList>
+      </Breadcrumb>
     </Container>
   );
 }

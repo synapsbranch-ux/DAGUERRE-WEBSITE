@@ -1,10 +1,13 @@
 import type { Metadata } from "next";
 import Link from "next/link";
 
+import { BlogCoverflow } from "@/components/sections/BlogCoverflow";
+import { FeaturedArticlePanel } from "@/components/sections/FeaturedArticlePanel";
 import { PostRow } from "@/components/sections/PostRow";
 import { JsonLd } from "@/components/seo/JsonLd";
 import { Button } from "@/components/ui/button";
 import { Container } from "@/components/ui/Container";
+import { Empty, EmptyDescription, EmptyHeader, EmptyTitle } from "@/components/ui/empty";
 import { Input } from "@/components/ui/input";
 import { Label } from "@/components/ui/label";
 import { PageHeader } from "@/components/ui/PageHeader";
@@ -106,18 +109,14 @@ export default async function BlogPage({ searchParams }: PageProps<"/[locale]/bl
         </Section>
 
         {/* La mise en avant n'a de sens que sur la vue non filtrée. */}
-        {!q && page === 1 ? (
+        {!q && page === 1 && featured.length > 0 ? (
           <Section title={labels.featured}>
-            {featured.length > 0 ? (
-              <div className="border-t border-border">
-                {featured.map((post) => (
-                  <PostRow key={post.slug} post={post} locale={locale} dict={dict} />
-                ))}
-              </div>
-            ) : (
-              <p className="text-sm text-muted-foreground">{labels.emptyFeatured}</p>
-            )}
+            <FeaturedArticlePanel post={featured[0]} locale={locale} dict={dict} />
           </Section>
+        ) : null}
+
+        {!q && page === 1 ? (
+          <BlogCoverflow posts={results.items} locale={locale} dict={dict} label={labels.recent} />
         ) : null}
 
         <Section title={labels.recent}>
@@ -140,7 +139,12 @@ export default async function BlogPage({ searchParams }: PageProps<"/[locale]/bl
               />
             </>
           ) : (
-            <p className="text-sm text-muted-foreground">{labels.empty}</p>
+            <Empty>
+              <EmptyHeader>
+                <EmptyTitle>{labels.empty}</EmptyTitle>
+                <EmptyDescription>{labels.description}</EmptyDescription>
+              </EmptyHeader>
+            </Empty>
           )}
         </Section>
 

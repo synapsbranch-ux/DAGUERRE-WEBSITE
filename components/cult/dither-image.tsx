@@ -389,6 +389,9 @@ const DitherImageOverlay = forwardRef<
 >(function DitherImageOverlay(
   {
     className,
+    // Copie visuelle du calque tramé : décorative par défaut, comme son alt
+    // vide l'indique déjà dans tous les appels du site.
+    alt = "",
     direction = "r",
     from = 0,
     to = 65,
@@ -409,6 +412,7 @@ const DitherImageOverlay = forwardRef<
         maskClassName,
         className
       )}
+      alt={alt}
       data-slot="dither-image-overlay"
       ref={ref}
       style={{ ...typedMaskStyle, ...style }}

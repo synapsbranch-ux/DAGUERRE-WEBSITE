@@ -16,20 +16,16 @@ import { useEffect, useMemo, useRef, useState } from "react";
  * Curated editorial portrait set used as the default `images` for {@link ScrollTiltedGrid}.
  * Hosted on Pinterest's CDN — fine for demos and prototypes; swap to your own assets in production.
  */
-export const DEFAULT_GRID_IMAGES: readonly string[] = [
-  "https://i.pinimg.com/736x/de/0f/9c/de0f9c57bf7ae1c48ea467ffe9817fdc.jpg",
-  "https://i.pinimg.com/736x/80/17/36/8017367dbe52dae63b58a678018795ee.jpg",
-  "https://i.pinimg.com/736x/0d/b6/1f/0db61f5245c835228df83398f6d96ceb.jpg",
-  "https://i.pinimg.com/736x/39/27/f5/3927f53cebd0a148ba806fbd15e1fdd9.jpg",
-  "https://i.pinimg.com/1200x/5f/ae/6d/5fae6de0940fe4a2471f34fb1b259b77.jpg",
-  "https://i.pinimg.com/736x/df/04/61/df0461286b3e5291300adbffa70b3e9e.jpg",
-  "https://i.pinimg.com/736x/6d/45/f1/6d45f1c96c3316c3bc5055ed6e8e3b8f.jpg",
-  "https://i.pinimg.com/736x/a9/4c/e0/a94ce014127cfded1c7160b110eb7a86.jpg",
-  "https://i.pinimg.com/736x/fe/f0/8a/fef08a661d0ef55561d99a293c79dd81.jpg",
-  "https://i.pinimg.com/736x/84/c6/10/84c610443c77c1e34398f071fdc3b71a.jpg",
-  "https://i.pinimg.com/736x/54/13/9d/54139d6fd658b1d5e71cdc07ea37a57c.jpg",
-  "https://i.pinimg.com/736x/2d/0b/74/2d0b74227b38d56fcc8b9f4872addcfc.jpg",
-];
+/**
+ * Ruixen UI — Scroll Tilted Grid.
+ *
+ * Adaptations Daguerre : le jeu d'images de démonstration (dépôt distant) est
+ * retiré — la grille n'affiche que des visuels du site — et `images` devient
+ * une propriété obligatoire.
+ *
+ * Les tuiles restent peintes en `background-image` : c'est la technique du
+ * composant, qui compose la bascule 3D et le flou sur la même surface.
+ */
 
 const easeIntoFocus = cubicBezier(0.22, 1, 0.36, 1);
 const easeOutOfFocus = cubicBezier(0, 0, 0.58, 1);
@@ -225,8 +221,8 @@ function Tile({
 }
 
 export type ScrollTiltedGridProps = {
-  /** Image URLs to render. Falls back to {@link DEFAULT_GRID_IMAGES}. */
-  images?: readonly string[];
+  /** Image URLs to render. */
+  images: readonly string[];
   /**
    * Cycle the source list and append more pairs as the user nears the bottom —
    * a perceptually infinite scroll. Default `false`.
@@ -284,7 +280,7 @@ export type ScrollTiltedGridProps = {
  * exit. Optionally loops infinitely via an IntersectionObserver-driven append.
  */
 export function ScrollTiltedGrid({
-  images = DEFAULT_GRID_IMAGES,
+  images,
   loop = false,
   initialCycles = 3,
   aspectRatio = "3/4",
@@ -298,7 +294,7 @@ export function ScrollTiltedGrid({
   maxCycles = Infinity,
   sectionPadding = "20vh",
   className,
-}: ScrollTiltedGridProps = {}) {
+}: ScrollTiltedGridProps) {
   const [cycles, setCycles] = useState(
     loop ? Math.min(initialCycles, maxCycles) : 1,
   );
@@ -394,3 +390,5 @@ export function ScrollTiltedGrid({
     </section>
   );
 }
+
+export default ScrollTiltedGrid;

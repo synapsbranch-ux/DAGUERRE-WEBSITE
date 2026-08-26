@@ -60,6 +60,16 @@ function fanTransform(index: number, count: number, spacing: number) {
   };
 }
 
+function subscribeCoarsePointer(onChange: () => void) {
+  const query = window.matchMedia("(pointer: coarse)");
+  query.addEventListener("change", onChange);
+  return () => query.removeEventListener("change", onChange);
+}
+
+function getCoarsePointerSnapshot() {
+  return !window.matchMedia("(pointer: coarse)").matches;
+}
+
 export function ImageCardFan({
   cards,
   activeId: controlledActiveId,
@@ -78,11 +88,14 @@ export function ImageCardFan({
   );
   const [hoveredId, setHoveredId] = React.useState<string | null>(null);
   // Dragging a card claims the vertical touch axis, which on a phone means
-  // swiping over the fan scrolls nothing. Pointer devices only.
-  // `matchMedia` n'existe pas au rendu serveur : la valeur est lue au montage,
-  // via un initialiseur paresseux plutôt qu'un effet qui déclencherait un
-  // second rendu immédiat.
-  const [canDrag, setCanDrag] = React.useState(false);
+  // swiping over the fan scrolls nothing. Pointer devices only. Read through
+  // `useSyncExternalStore`, not a `setState` in an effect: the server has no
+  // pointer, so it renders `false` and the client corrects itself in one pass.
+  const canDrag = React.useSyncExternalStore(
+    subscribeCoarsePointer,
+    getCoarsePointerSnapshot,
+    () => false,
+  );
 
   // Fall back to the first card whenever the requested id is not in the hand:
   // a swapped `cards` array, a stale controlled id, a bad `defaultActiveId`.
@@ -95,9 +108,6 @@ export function ImageCardFan({
   const activeIndex = cards.findIndex((card) => card.id === activeId);
   const activeCard = cards[activeIndex];
 
-  React.useEffect(() => {
-    setCanDrag(!window.matchMedia("(pointer: coarse)").matches);
-  }, []);
 
   React.useEffect(() => {
     const node = fanRef.current;

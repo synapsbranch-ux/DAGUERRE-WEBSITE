@@ -12,6 +12,7 @@ import {
   HTMLMotionProps,
   motion,
   TargetAndTransition,
+  Transition,
   useMotionValue,
   useSpring,
 } from "motion/react"
@@ -145,11 +146,13 @@ const Expandable = React.forwardRef<HTMLDivElement, ExpandableProps>(
   }
 )
 
+Expandable.displayName = "Expandable"
+
 // Simplify animation types
 type AnimationPreset = {
-  initial: { [key: string]: any }
-  animate: { [key: string]: any }
-  exit: { [key: string]: any }
+  initial: Record<string, string | number>
+  animate: Record<string, string | number>
+  exit: Record<string, string | number>
 }
 
 // Update ANIMATION_PRESETS type
@@ -206,19 +209,12 @@ const ANIMATION_PRESETS: Record<string, AnimationPreset> = {
   },
 }
 
-// Update type definitions
-type AnimationConfig = {
-  initial: { [key: string]: number | string }
-  animate: { [key: string]: number | string }
-  exit: { [key: string]: number | string }
-}
-
 // Props for defining custom animations
 interface AnimationProps {
   initial?: TargetAndTransition
   animate?: TargetAndTransition
   exit?: TargetAndTransition
-  transition?: any
+  transition?: Transition
 }
 
 // Inside ExpandableContent component
@@ -347,6 +343,8 @@ const ExpandableContent = React.forwardRef<
     )
   }
 )
+
+ExpandableContent.displayName = "ExpandableContent"
 
 interface ExpandableCardProps {
   children: ReactNode
