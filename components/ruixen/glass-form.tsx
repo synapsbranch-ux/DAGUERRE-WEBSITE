@@ -3,6 +3,17 @@
 import * as React from "react";
 import { motion } from "motion/react";
 
+/**
+ * Ruixen UI — Glass Form.
+ *
+ * Adaptations Daguerre :
+ * - `FormTextArea` s'ajoute — le registre n'avait qu'une ligne `FormField`
+ *   sur une hauteur fixe, sans variante multiligne pour un message ;
+ * - le bouton d'envoi n'est pas `FormButton` : le cahier des charges demande
+ *   le bouton en verre liquide Liquefy pour l'action d'envoi (voir
+ *   `ContactForm.tsx`) — `FormButton` reste disponible pour d'autres usages.
+ */
+
 /* ── sound ─────────────────────────────────────────────── */
 let _a: AudioContext, _b: AudioBuffer;
 const tick = () => {
@@ -217,6 +228,9 @@ interface FormFieldProps {
   onChange?: (value: string) => void;
   disabled?: boolean;
   autoFocus?: boolean;
+  /** Validation HTML native — absente du registre d'origine, non contrôlé. */
+  required?: boolean;
+  autoComplete?: string;
 }
 
 function FormField({
@@ -228,6 +242,8 @@ function FormField({
   onChange,
   disabled,
   autoFocus,
+  required,
+  autoComplete,
 }: FormFieldProps) {
   const [showPass, setShowPass] = React.useState(false);
   const [hover, setHover] = React.useState(false);
@@ -265,6 +281,8 @@ function FormField({
         onChange={(e) => onChange?.(e.target.value)}
         disabled={disabled}
         autoFocus={autoFocus}
+        required={required}
+        autoComplete={autoComplete}
         style={{
           flex: 1,
           fontSize: 15,
@@ -295,6 +313,72 @@ function FormField({
           {showPass ? "Hide" : "Show"}
         </button>
       )}
+    </div>
+  );
+}
+
+/* ═══════════════════════════════════════════════════════════
+   FormTextArea — label above, multi-line glass field below
+   (adaptation Daguerre : absente du registre d'origine)
+   ═══════════════════════════════════════════════════════════ */
+interface FormTextAreaProps {
+  label: string;
+  placeholder?: string;
+  value?: string;
+  defaultValue?: string;
+  onChange?: (value: string) => void;
+  rows?: number;
+  disabled?: boolean;
+  required?: boolean;
+}
+
+function FormTextArea({
+  label,
+  placeholder,
+  value,
+  defaultValue,
+  onChange,
+  rows = 5,
+  disabled,
+  required,
+}: FormTextAreaProps) {
+  const id = React.useId();
+
+  return (
+    <div style={{ padding: "10px 16px", opacity: disabled ? 0.35 : 1 }}>
+      <label
+        htmlFor={id}
+        style={{
+          display: "block",
+          fontSize: 15,
+          color: P.hi,
+          marginBottom: 6,
+        }}
+      >
+        {label}
+      </label>
+      <textarea
+        id={id}
+        placeholder={placeholder}
+        value={value}
+        defaultValue={defaultValue}
+        onChange={(e) => onChange?.(e.target.value)}
+        rows={rows}
+        disabled={disabled}
+        required={required}
+        style={{
+          width: "100%",
+          resize: "vertical",
+          fontSize: 15,
+          lineHeight: 1.5,
+          color: P.hi,
+          background: "transparent",
+          border: "none",
+          outline: "none",
+          fontFamily: "inherit",
+          padding: 0,
+        }}
+      />
     </div>
   );
 }
@@ -562,11 +646,12 @@ function FormButton({
 }
 
 /* ── exports ───────────────────────────────────────────── */
-export { GlassForm, FormGroup, FormField, FormToggle, FormSegment, FormButton };
+export { GlassForm, FormGroup, FormField, FormTextArea, FormToggle, FormSegment, FormButton };
 export type {
   GlassFormProps,
   FormGroupProps,
   FormFieldProps,
+  FormTextAreaProps,
   FormToggleProps,
   FormSegmentProps,
   FormButtonProps,
