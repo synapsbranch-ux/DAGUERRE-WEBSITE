@@ -1,4 +1,4 @@
-import { FolderGit2, Globe, Link2, Mail, type LucideIcon, Phone } from "lucide-react";
+import { FolderGit2, Globe, Link2, Mail, Phone } from "lucide-react";
 
 import { LocaleSwitcher } from "@/components/layout/LocaleSwitcher";
 import { legalNavKeys, mainNavKeys, secondaryNavKeys } from "@/components/layout/Navigation";
@@ -18,19 +18,23 @@ type FooterProps = {
 };
 
 /**
- * Icône lucide déduite du domaine d'un lien social géré au CMS.
+ * Icône lucide déduite du domaine d'un lien social géré au CMS, déjà rendue
+ * en élément.
  *
  * lucide-react v1 ne fournit plus d'icônes de marque : on retient donc des
  * pictogrammes génériques, et c'est le libellé du lien — saisi au CMS — qui
- * nomme la plateforme pour les lecteurs d'écran.
+ * nomme la plateforme pour les lecteurs d'écran. Rendue ici plutôt que
+ * renvoyée comme référence de composant : `Footer` est un composant serveur,
+ * et une référence de composant ne peut pas franchir la frontière vers
+ * `FooterPro`, qui est client.
  */
-function socialIcon(url: string): LucideIcon {
+function socialIcon(url: string): React.ReactNode {
   const value = url.toLowerCase();
-  if (value.startsWith("mailto:")) return Mail;
-  if (value.startsWith("tel:")) return Phone;
-  if (value.includes("github") || value.includes("gitlab")) return FolderGit2;
-  if (value.includes("linkedin")) return Link2;
-  return Globe;
+  if (value.startsWith("mailto:")) return <Mail aria-hidden="true" />;
+  if (value.startsWith("tel:")) return <Phone aria-hidden="true" />;
+  if (value.includes("github") || value.includes("gitlab")) return <FolderGit2 aria-hidden="true" />;
+  if (value.includes("linkedin")) return <Link2 aria-hidden="true" />;
+  return <Globe aria-hidden="true" />;
 }
 
 /**

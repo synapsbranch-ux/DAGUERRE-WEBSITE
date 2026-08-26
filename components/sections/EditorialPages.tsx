@@ -9,6 +9,7 @@ import {
   DitherImageOverlay,
   DitherImageReveal,
 } from "@/components/cult/dither-image";
+import { MilestoneStepper } from "@/components/ruixen/milestone-stepper";
 import { Reveal } from "@/components/motion/Reveal";
 import { Container } from "@/components/ui/Container";
 import {
@@ -47,44 +48,35 @@ export function EditorialBody({ body, className }: { body?: string; className?: 
   );
 }
 
-/** Frise chronologique : période, intitulé, détail, illustration facultative. */
+/**
+ * Frise chronologique — Ruixen UI « Milestone Stepper ».
+ *
+ * Un parcours publié est un fait accompli : chaque jalon est rendu
+ * « completed », le composant n'étant pas ici un suivi de progression.
+ */
 export function EditorialTimeline({ title, entries }: { title: string; entries: PageTimelineEntry[] }) {
   if (entries.length === 0) return null;
 
   return (
     <section className="border-t border-border py-14">
       <h2 className="text-3xl">{title}</h2>
-      <ol className="mt-8 grid gap-4">
-        {entries.map((entry, index) => (
-          <li key={`${entry.title}-${index}`}>
-            <Reveal delay={index * 60}>
-              <article className="grid gap-4 rounded-xl border border-border bg-white/45 p-5 sm:grid-cols-[minmax(0,1fr)_auto] sm:items-start">
-                <div>
-                  {entry.period ? (
-                    <p className="tnum text-xs font-bold uppercase tracking-[.14em] text-[var(--copper-deep)]">
-                      {entry.period}
-                    </p>
-                  ) : null}
-                  <h3 className="mt-2 text-xl">{entry.title}</h3>
-                  {entry.detail ? (
-                    <p className="mt-2 max-w-[70ch] text-sm leading-6 text-muted-foreground">
-                      {entry.detail}
-                    </p>
-                  ) : null}
-                </div>
-                {entry.image ? (
-                  <EditorialImage
-                    src={entry.image}
-                    alt=""
-                    className="aspect-[4/3] min-h-0 w-full rounded-lg border-0 sm:w-44"
-                    sizes="176px"
-                  />
-                ) : null}
-              </article>
-            </Reveal>
-          </li>
-        ))}
-      </ol>
+      <div className="mt-8 max-w-2xl">
+        <MilestoneStepper
+          variant="detailed"
+          currentMilestone={entries.length}
+          milestones={entries.map((entry, index) => {
+            const image = entry.image ? resolveKnownImageSource(entry.image) : undefined;
+            return {
+              id: `${entry.title}-${index}`,
+              title: entry.title,
+              description: entry.detail,
+              date: entry.period,
+              image: image ? (typeof image === "string" ? image : image.src) : undefined,
+              imageUnoptimized: image ? isUnconfiguredRemoteImage(image) : undefined,
+            };
+          })}
+        />
+      </div>
     </section>
   );
 }
@@ -205,25 +197,25 @@ export function EditorialItems({
 }
 
 /** Parcours : postes ou diplômes, organisation et période. */
+/** Expériences — Ruixen UI « Milestone Stepper », en variante compacte. */
 export function EditorialEntries({ title, entries }: { title: string; entries: PageEntry[] }) {
   if (entries.length === 0) return null;
 
   return (
     <section className="border-t border-border py-14">
       <h2 className="text-3xl">{title}</h2>
-      <ol className="mt-8 grid gap-6">
-        {entries.map((entry, index) => (
-          <li key={`${entry.title}-${index}`} className="border-l-2 border-[var(--copper)]/40 pl-5">
-            <h3 className="text-xl">{entry.title}</h3>
-            <p className="mt-1 text-sm font-semibold text-muted-foreground">
-              {[entry.organisation, entry.period].filter(Boolean).join(" · ")}
-            </p>
-            {entry.detail ? (
-              <p className="mt-2 max-w-[74ch] text-sm leading-6 text-muted-foreground">{entry.detail}</p>
-            ) : null}
-          </li>
-        ))}
-      </ol>
+      <div className="mt-8 max-w-2xl">
+        <MilestoneStepper
+          variant="detailed"
+          currentMilestone={entries.length}
+          milestones={entries.map((entry, index) => ({
+            id: `${entry.title}-${index}`,
+            title: entry.title,
+            description: [entry.organisation, entry.detail].filter(Boolean).join(" — ") || undefined,
+            date: entry.period,
+          }))}
+        />
+      </div>
     </section>
   );
 }

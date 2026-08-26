@@ -4,7 +4,7 @@ import { ContactCTA } from "@/components/sections/ContactCTA";
 import { ResearchCard } from "@/components/sections/ResearchCard";
 import { MagneticTabs, type MagneticTabItem } from "@/components/ruixen/magnetic-tabs";
 import { Container } from "@/components/ui/Container";
-import { Empty, EmptyDescription, EmptyHeader, EmptyTitle } from "@/components/ui/empty";
+import { Empty, EmptyHeader, EmptyTitle } from "@/components/ui/empty";
 import { PageHeader } from "@/components/ui/PageHeader";
 import { getDictionary, getDictionaryFor, getLocale } from "@/lib/dictionaries";
 import { isLocale } from "@/lib/i18n";

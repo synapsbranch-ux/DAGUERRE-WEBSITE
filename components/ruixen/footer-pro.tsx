@@ -27,7 +27,14 @@ interface FooterColumn {
 }
 
 interface FooterSocial {
-  icon: React.ComponentType<{ className?: string }>;
+  /**
+   * Icône déjà rendue (`<Icon className="size-3.5" />`), pas une référence de
+   * composant : `Footer.tsx` est un composant serveur, et une référence de
+   * composant ne peut pas franchir la frontière vers ce composant client
+   * (« Functions cannot be passed directly to Client Components »). Un
+   * élément, lui, se sérialise normalement.
+   */
+  icon: React.ReactNode;
   href: string;
   label?: string;
   external?: boolean;
@@ -198,16 +205,16 @@ export default function FooterPro(props?: FooterProProps) {
                 <div className="h-3 w-px bg-current/20" />
               )}
 
-              {socials.map(({ icon: Icon, href, label, external }, idx) => (
+              {socials.map(({ icon, href, label, external }, idx) => (
                 <Link
                   key={idx}
                   href={href}
                   aria-label={label}
                   target={external ? "_blank" : undefined}
                   rel={external ? "noreferrer noopener" : undefined}
-                  className="text-current/55 transition-colors duration-150 hover:text-current"
+                  className="text-current/55 transition-colors duration-150 hover:text-current [&_svg]:size-3.5"
                 >
-                  <Icon className="size-3.5" />
+                  {icon}
                 </Link>
               ))}
 
