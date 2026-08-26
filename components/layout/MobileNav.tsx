@@ -29,7 +29,7 @@ type MobileNavProps = {
  */
 export function MobileNav({ locale, dict, brandName, sections }: MobileNavProps) {
   return (
-    <div className="pointer-events-none fixed inset-x-0 top-0 z-50 h-[min(560px,86svh)] lg:hidden">
+    <div className="pointer-events-none fixed inset-x-0 top-0 z-50 h-[min(560px,86svh)] xl:hidden">
       <ExpandableMenuNavbar
         brand={
           <span className="grid size-6 place-items-center rounded-full border border-[var(--copper)]/55 bg-[var(--copper)]/12 font-heading text-[11px] font-bold text-[var(--copper-deep)]">

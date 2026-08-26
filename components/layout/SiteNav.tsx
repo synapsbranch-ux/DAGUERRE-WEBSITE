@@ -20,7 +20,7 @@ export function SiteNav({ items, label }: { items: SiteNavItem[]; label: string 
   return (
     <HoverGradientNavBar
       aria-label={label}
-      className="hidden lg:block text-white/74"
+      className="hidden xl:block text-white/74"
       items={items.map((item) => ({
         ...item,
         current: pathname === item.href || pathname.startsWith(`${item.href}/`),

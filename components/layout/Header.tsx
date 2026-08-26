@@ -77,11 +77,11 @@ export function Header({ locale, dict, populated }: HeaderProps) {
     <>
       {/* Mobile : la carte dépliable tient lieu de barre, en `fixed`. */}
       <MobileNav locale={locale} dict={dict} brandName={siteConfig.name} sections={mobileSections} />
-      <div className="h-[72px] lg:hidden" aria-hidden="true" />
+      <div className="h-[72px] xl:hidden" aria-hidden="true" />
 
       <NavbarFloating
-        className="sticky top-0 z-40 hidden px-5 pt-5 pb-3 sm:px-10 lg:block lg:px-[70px]"
-        innerClassName="h-[68px] max-w-[1300px] border-white/10 bg-[var(--navy-950)]/94 px-6 text-white shadow-[0_8px_30px_rgb(0_0_0_/_0.16)] backdrop-blur-xl lg:px-9"
+        className="sticky top-0 z-40 hidden px-5 pt-5 pb-3 sm:px-10 xl:block xl:px-[70px]"
+        innerClassName="h-[68px] max-w-[1300px] border-white/10 bg-[var(--navy-950)]/94 px-6 text-white shadow-[0_8px_30px_rgb(0_0_0_/_0.16)] backdrop-blur-xl xl:px-9"
         logoHref={href("home", locale)}
         logo={
           <span className="flex items-center gap-3">
