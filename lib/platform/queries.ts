@@ -1,3 +1,4 @@
+import { ServiceModel } from "@/lib/db/models";
 import {
   ClientProjectModel,
   ClientProjectUpdateModel,
@@ -651,4 +652,34 @@ export async function listClientDownloads(
       downloadedAt: iso(doc.downloadedAt),
     };
   });
+}
+
+
+/* ------------------------------------------------------------------ */
+/* Services proposés au formulaire de devis                            */
+/* ------------------------------------------------------------------ */
+
+export type QuoteServiceOption = { id: string; label: string };
+
+/**
+ * Services publiés, sous forme de choix pour la demande de devis.
+ *
+ * La demande stocke une **relation** vers le service (`serviceId`) plutôt
+ * qu'une chaîne recopiée : renommer une offre au CMS ne réécrit pas
+ * l'historique des dossiers, et un devis reste rattaché à ce qui a été
+ * demandé.
+ */
+export async function listQuoteServices(locale: Locale): Promise<QuoteServiceOption[]> {
+  const docs = (await ServiceModel.find({ status: "published" })
+    .select("title order")
+    .sort({ order: 1 })
+    .limit(60)
+    .lean()) as Doc[];
+
+  return docs
+    .map((doc) => ({
+      id: id(doc._id),
+      label: pickLocale(doc.title as LocalizedString | undefined, locale),
+    }))
+    .filter((entry) => entry.label);
 }

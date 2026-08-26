@@ -42,6 +42,7 @@ export type RouteKey =
   | "forgotPassword"
   | "resetPassword"
   | "quote"
+  | "quoteClaim"
   | "resources"
   | "newsletter"
   | "newsletterConfirm"
@@ -222,6 +223,13 @@ export const routes: Record<RouteKey, RouteDefinition> = {
     inSitemap: true,
     priority: 0.9,
     changeFrequency: "monthly",
+  },
+  quoteClaim: {
+    path: { fr: "devis/reclamer", en: "quote/claim" },
+    label: { fr: "Suivre ma demande", en: "Track my request" },
+    inSitemap: false,
+    priority: 0.1,
+    changeFrequency: "yearly",
   },
   resources: {
     path: { fr: "ressources", en: "resources" },
