@@ -87,6 +87,30 @@ export function getAuth() {
     },
   },
   user: { additionalFields: { role: { type: "string", required: false, defaultValue: "client", input: false } } },
+  /**
+   * Limitation de débit des points d'entrée d'authentification.
+   *
+   * Better Auth n'active la sienne qu'en production ; on l'active partout
+   * pour que le comportement testé soit celui qui sera servi. Les règles
+   * particulières visent les trois portes que l'on attaque : la connexion
+   * (force brute), l'inscription (création de comptes en masse) et la
+   * réinitialisation (envoi de courriels à des tiers).
+   *
+   * Le stockage est en mémoire du processus : suffisant pour une instance,
+   * à doubler d'une limitation en périphérie sur un déploiement réparti.
+   */
+  rateLimit: {
+    enabled: true,
+    window: 60,
+    max: 60,
+    customRules: {
+      "/sign-in/email": { window: 300, max: 10 },
+      "/sign-up/email": { window: 3600, max: 5 },
+      "/request-password-reset": { window: 3600, max: 5 },
+      "/reset-password": { window: 3600, max: 10 },
+      "/send-verification-email": { window: 3600, max: 5 },
+    },
+  },
   plugins: [nextCookies()],
   });
 }

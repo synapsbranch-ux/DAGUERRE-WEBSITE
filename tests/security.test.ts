@@ -13,6 +13,8 @@ import { csvCell } from "@/lib/platform/csv";
 import { readPage, searchRegex, subscriberFilter, quoteFilter } from "@/lib/platform/admin-filters";
 import { checkFile, downloadHeaders, safeFilename } from "@/lib/media/files";
 import { isAdminRole, isStaffRole, normalizeRole } from "@/lib/platform/enums";
+import { isHandledEvent, verifyWebhookSignature } from "@/lib/email/webhook";
+import { createHmac } from "node:crypto";
 
 /**
  * Contrôles de sécurité.
@@ -351,5 +353,90 @@ describe("rôles", () => {
     assert.equal(isAdminRole("staff"), false);
     assert.equal(isStaffRole("staff"), true);
     assert.equal(isStaffRole("client"), false);
+  });
+});
+
+
+describe("notifications du fournisseur d'envoi", () => {
+  const secret = "whsec_" + Buffer.from("secret-webhook-de-test").toString("base64");
+  const id = "msg_1";
+  const body = JSON.stringify({ type: "email.bounced", data: { email_id: "abc" } });
+  const now = 1_800_000_000_000;
+  const timestamp = String(Math.floor(now / 1000));
+
+  const sign = (payload: string, at: string, messageId = id, key = secret) =>
+    "v1," +
+    createHmac("sha256", Buffer.from(key.slice(6), "base64"))
+      .update(`${messageId}.${at}.${payload}`)
+      .digest("base64");
+
+  test("une signature correcte est acceptée", () => {
+    const result = verifyWebhookSignature({
+      secret,
+      id,
+      timestamp,
+      signatureHeader: sign(body, timestamp),
+      body,
+      now,
+    });
+    assert.deepEqual(result, { ok: true });
+  });
+
+  test("un corps modifié invalide la signature", () => {
+    const result = verifyWebhookSignature({
+      secret,
+      id,
+      timestamp,
+      signatureHeader: sign(body, timestamp),
+      body: body.replace("bounced", "delivered"),
+      now,
+    });
+    assert.equal(result.ok, false);
+  });
+
+  test("un horodatage trop ancien est rejeté", () => {
+    const old = String(Math.floor(now / 1000) - 3600);
+    const result = verifyWebhookSignature({
+      secret,
+      id,
+      timestamp: old,
+      signatureHeader: sign(body, old),
+      body,
+      now,
+    });
+    assert.equal(result.ok, false);
+  });
+
+  test("sans secret configuré, rien n'est accepté", () => {
+    const result = verifyWebhookSignature({
+      secret: undefined,
+      id,
+      timestamp,
+      signatureHeader: sign(body, timestamp),
+      body,
+      now,
+    });
+    assert.equal(result.ok, false);
+  });
+
+  test("des en-têtes absents sont rejetés", () => {
+    assert.equal(
+      verifyWebhookSignature({ secret, id: null, timestamp, signatureHeader: "x", body, now }).ok,
+      false,
+    );
+    assert.equal(
+      verifyWebhookSignature({ secret, id, timestamp: null, signatureHeader: "x", body, now }).ok,
+      false,
+    );
+    assert.equal(
+      verifyWebhookSignature({ secret, id, timestamp, signatureHeader: null, body, now }).ok,
+      false,
+    );
+  });
+
+  test("seuls les événements connus sont traités", () => {
+    assert.equal(isHandledEvent("email.bounced"), true);
+    assert.equal(isHandledEvent("email.opened"), false);
+    assert.equal(isHandledEvent(42), false);
   });
 });

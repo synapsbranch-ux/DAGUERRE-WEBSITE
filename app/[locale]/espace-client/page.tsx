@@ -55,7 +55,7 @@ export default async function PortalOverview({ params }: PageProps<"/[locale]/es
         lead={t.portal.welcomeLead}
         actions={
           <Button asChild size="sm">
-            <Link href={href("quote", locale)}>{t.quotes.newRequest}</Link>
+            <Link href={href("portalQuoteNew", locale)}>{t.quotes.newRequest}</Link>
           </Button>
         }
       />
@@ -77,7 +77,7 @@ export default async function PortalOverview({ params }: PageProps<"/[locale]/es
                 title={t.quotes.emptyTitle}
                 description={t.quotes.emptyBody}
                 ctaLabel={t.quotes.emptyCta}
-                ctaHref={href("quote", locale)}
+                ctaHref={href("portalQuoteNew", locale)}
               />
             ) : (
               <ul className="divide-y divide-border border-y border-border">

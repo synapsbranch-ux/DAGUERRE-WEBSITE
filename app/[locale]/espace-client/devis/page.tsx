@@ -40,7 +40,8 @@ export default async function PortalQuotesPage({
         lead={t.myQuotesLead}
         actions={
           <Button asChild size="sm">
-            <Link href={href("quote", locale)}>{t.newRequest}</Link>
+            {/* Formulaire de l'espace : les coordonnées viennent du profil. */}
+            <Link href={href("portalQuoteNew", locale)}>{t.newRequest}</Link>
           </Button>
         }
       />
@@ -50,7 +51,7 @@ export default async function PortalQuotesPage({
           title={t.emptyTitle}
           description={t.emptyBody}
           ctaLabel={t.emptyCta}
-          ctaHref={href("quote", locale)}
+          ctaHref={href("portalQuoteNew", locale)}
         />
       ) : (
         <div className="w-full overflow-x-auto">

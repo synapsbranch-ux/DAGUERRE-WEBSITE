@@ -145,6 +145,11 @@ Un envoi relancé ne double personne : la liste des destinataires est figée
 sous un index unique. Le statut de chaque abonné est revérifié juste avant
 l'envoi, donc un désabonnement intervenu entre-temps est respecté.
 
+Les compteurs « distribué », « rejeté » et « plainte » reflètent ce que le
+fournisseur d'envoi rapporte, à condition qu'un webhook soit déclaré (voir le
+README). Sans lui, ils restent à zéro — ce qui signifie « non mesuré », pas
+« aucun ».
+
 Les taux d'ouverture et de clic ne sont pas affichés : les mesurer demanderait
 un pixel de suivi et une redirection des liens, qui ne sont pas en place.
 Mieux vaut pas de chiffre qu'un chiffre inventé.

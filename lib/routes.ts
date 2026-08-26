@@ -51,6 +51,7 @@ export type RouteKey =
   | "portalArticles"
   | "portalResources"
   | "portalQuotes"
+  | "portalQuoteNew"
   | "portalMessages"
   | "portalProjects"
   | "portalNotifications"
@@ -286,6 +287,13 @@ export const routes: Record<RouteKey, RouteDefinition> = {
     inSitemap: false,
     priority: 0.3,
     changeFrequency: "daily",
+  },
+  portalQuoteNew: {
+    path: { fr: "espace-client/devis/nouveau", en: "client/quotes/new" },
+    label: { fr: "Nouvelle demande", en: "New request" },
+    inSitemap: false,
+    priority: 0.3,
+    changeFrequency: "monthly",
   },
   portalMessages: {
     path: { fr: "espace-client/messages", en: "client/messages" },

@@ -101,6 +101,12 @@ curl -X POST -H "authorization: Bearer $CRON_SECRET" \
   https://exemple.com/api/newsletter/dispatch
 ```
 
+Les statistiques d'envoi deviennent réelles — distribué, rejeté, plainte —
+dès qu'un webhook Resend est déclaré vers `/api/webhooks/resend` avec son
+secret dans `RESEND_WEBHOOK_SECRET`. Chaque appel est vérifié par signature et
+horodatage ; sans secret configuré, le point d'entrée refuse tout. Un rejet dur
+ou un signalement d'abus ferme définitivement l'adresse côté abonné.
+
 ## Médias
 
 Deux origines coexistent dans la bibliothèque :
