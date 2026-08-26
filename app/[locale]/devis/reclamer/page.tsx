@@ -54,7 +54,7 @@ export default async function ClaimQuotePage({
       <PageHeader
         eyebrow={dict.platform.quotes.title}
         title={dict.platform.quotes.successTrack}
-        description={token ? dict.platform.quotes.successLead : dict.platform.auth.resetInvalid}
+        description={token ? dict.platform.quotes.successLead : dict.platform.auth.linkInvalid}
       />
 
       {token ? (

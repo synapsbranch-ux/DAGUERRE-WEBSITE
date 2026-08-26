@@ -1,9 +1,12 @@
-import { headers } from "next/headers";
+import { cache } from "react";
 import { NextResponse } from "next/server";
 import { redirect } from "next/navigation";
 
-import { getAuth } from "@/lib/auth";
-import { isAdminRole, isStaffRole, normalizeRole, type Role } from "@/lib/platform/enums";
+import { getLogtoContext } from "@logto/next/server-actions";
+
+import { logtoConfig } from "@/lib/auth/logto";
+import { roleFromClaims } from "@/lib/auth/roles";
+import { isAdminRole, normalizeRole, type Role } from "@/lib/platform/enums";
 import { safeNextPath } from "@/lib/platform/pathname";
 
 /**
@@ -12,13 +15,17 @@ import { safeNextPath } from "@/lib/platform/pathname";
  * Toute page et toute route d'API passent par ces gardes. Deux règles y sont
  * tenues sans exception :
  *
- * 1. **Le rôle vient de la session serveur**, jamais du corps de la requête ni
- *    d'un cookie interprété côté client. Un navigateur ne peut donc pas
- *    s'attribuer `admin`.
+ * 1. **Le rôle vient de la revendication signée par Logto**, jamais du corps de
+ *    la requête ni d'un cookie interprété côté client. Un navigateur ne peut
+ *    donc pas s'attribuer `admin`.
  * 2. **La propriété d'un objet se résout côté serveur.** Un identifiant reçu
  *    du navigateur ne sert qu'à *chercher* un document ; c'est la requête qui
  *    porte la condition d'appartenance, pas une comparaison faite après coup
  *    sur un document déjà chargé et déjà renvoyé.
+ *
+ * Depuis la bascule vers Logto, ce fichier est la **seule** couture entre le
+ * fournisseur d'identité et le reste de l'application : `PlatformSession` garde
+ * sa forme, et les soixante et quelques appelants n'ont pas eu à changer.
  */
 
 export type SessionUser = {
@@ -31,35 +38,41 @@ export type SessionUser = {
 
 export type PlatformSession = { user: SessionUser };
 
-/** Session courante, ou `null` si absente, invalide ou base injoignable. */
-export async function readPlatformSession(): Promise<PlatformSession | null> {
+/**
+ * Session courante, ou `null` si absente, invalide ou Logto injoignable.
+ *
+ * Mémoïsée par `cache()` de React : une page qui appelle une garde puis une
+ * requête de données déchiffrerait sinon le cookie de session plusieurs fois
+ * dans le même rendu. C'est la couche d'accès aux données que recommande le
+ * guide d'authentification de Next
+ * (`node_modules/next/dist/docs/01-app/02-guides/authentication.md`).
+ */
+export const readPlatformSession = cache(async (): Promise<PlatformSession | null> => {
   try {
-    const session = await getAuth().api.getSession({ headers: await headers() });
-    if (!session?.user) return null;
-    const user = session.user as {
-      id?: unknown;
-      name?: unknown;
-      email?: unknown;
-      role?: unknown;
-      emailVerified?: unknown;
-    };
-    const id = String(user.id ?? "");
+    const context = await getLogtoContext(logtoConfig());
+    if (!context.isAuthenticated) return null;
+
+    const claims = context.claims;
+    const id = typeof claims?.sub === "string" ? claims.sub : "";
     if (!id) return null;
+
     return {
       user: {
         id,
-        name: String(user.name ?? ""),
-        email: String(user.email ?? "").toLowerCase(),
-        role: normalizeRole(user.role),
-        emailVerified: user.emailVerified === true,
+        // Un compte créé par courriel seul n'a ni nom ni pseudonyme : mieux vaut
+        // afficher l'adresse qu'une chaîne vide dans le tableau de bord.
+        name: String(claims?.name || claims?.username || claims?.email || ""),
+        email: String(claims?.email ?? "").toLowerCase(),
+        role: roleFromClaims(claims),
+        emailVerified: claims?.email_verified === true,
       },
     };
   } catch {
-    // Authentification non configurée ou base injoignable : traité comme une
-    // absence de session, jamais comme un accès autorisé.
+    // Authentification non configurée, cookie illisible ou Logto injoignable :
+    // traité comme une absence de session, jamais comme un accès autorisé.
     return null;
   }
-}
+});
 
 export { safeNextPath };
 
@@ -108,14 +121,6 @@ export async function requireAdminSessionApi(): Promise<ApiGuard<PlatformSession
   return { session };
 }
 
-/** Exige un membre de l'équipe (administration ou rédaction). */
-export async function requireStaffSessionApi(): Promise<ApiGuard<PlatformSession>> {
-  const session = await readPlatformSession();
-  if (!session) return { denied: unauthorized() };
-  if (!isStaffRole(session.user.role)) return { denied: forbidden("Accès réservé à l'équipe.") };
-  return { session };
-}
-
 /**
  * Réponse « introuvable » pour un objet qui existe mais ne vous appartient pas.
  *
@@ -125,4 +130,4 @@ export async function requireStaffSessionApi(): Promise<ApiGuard<PlatformSession
  */
 export const notFoundResponse = () => NextResponse.json({ error: "Introuvable." }, { status: 404 });
 
-export { isAdminRole, isStaffRole, normalizeRole };
+export { isAdminRole, normalizeRole };

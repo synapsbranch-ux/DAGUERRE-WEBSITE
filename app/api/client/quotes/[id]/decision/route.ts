@@ -76,7 +76,7 @@ export async function POST(request: Request, { params }: Ctx) {
     );
   }
 
-  const actor = { id: user.id, email: user.email, role: "client" as const };
+  const actor = { id: user.id, email: user.email, role: "customer" as const };
   await logQuoteActivity(id, accepted ? "client_accepted" : "client_declined", actor, {
     version: proposal.get("version"),
   });

@@ -67,46 +67,6 @@ export function accountWelcomeEmail(
   );
 }
 
-export function verifyEmailEmail(
-  locale: Locale,
-  params: { name: string; url: string },
-): RenderedEmail {
-  return build(
-    locale,
-    { fr: "Confirmez votre adresse courriel", en: "Confirm your email address" },
-    { fr: "Confirmez votre adresse", en: "Confirm your address" },
-    [
-      p(
-        `Bonjour ${params.name}, confirmez votre adresse pour activer entièrement votre compte.`,
-        `Hello ${params.name}, confirm your address to fully activate your account.`,
-        locale,
-      ),
-      cta("Confirmer mon adresse", "Confirm my address", params.url, locale),
-      { kind: "paragraph", text: IGNORE[locale] },
-    ],
-  );
-}
-
-export function resetPasswordEmail(
-  locale: Locale,
-  params: { name: string; url: string },
-): RenderedEmail {
-  return build(
-    locale,
-    { fr: "Réinitialiser votre mot de passe", en: "Reset your password" },
-    { fr: "Nouveau mot de passe", en: "New password" },
-    [
-      p(
-        `Bonjour ${params.name}, voici le lien qui vous permet de choisir un nouveau mot de passe. Il expire dans une heure.`,
-        `Hello ${params.name}, here is the link to choose a new password. It expires in one hour.`,
-        locale,
-      ),
-      cta("Choisir un mot de passe", "Choose a password", params.url, locale),
-      { kind: "paragraph", text: IGNORE[locale] },
-    ],
-  );
-}
-
 /* ------------------------------------------------------------------ */
 /* Infolettre                                                          */
 /* ------------------------------------------------------------------ */

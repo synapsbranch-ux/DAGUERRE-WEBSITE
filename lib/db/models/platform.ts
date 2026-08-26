@@ -17,6 +17,7 @@ import {
   recipientStatuses,
   resourceTypes,
   resourceVisibilities,
+  roles,
   subscriberSources,
   subscriberStatuses,
 } from "@/lib/platform/enums";
@@ -31,11 +32,15 @@ import {
  *
  * ## Références vers les comptes
  *
- * Better Auth stocke ses utilisateurs dans la collection `user` avec un `_id`
- * MongoDB, exposé sous forme de **chaîne hexadécimale** par l'adaptateur. Les
- * champs `userId` sont donc des `String`, jamais des `ObjectId` : un
- * `Schema.Types.ObjectId` obligerait à convertir à chaque lecture de session
- * et lèverait sur toute valeur inattendue.
+ * Les comptes appartiennent à **Logto**, pas à cette base. Un `userId` est donc
+ * un sujet Logto (`sub`) : une chaîne courte, ni un `ObjectId` ni un UUID. Les
+ * champs qui le portent sont des `String`, ce qu'ils étaient déjà — un
+ * `Schema.Types.ObjectId` lèverait sur chaque valeur.
+ *
+ * `AppUser` en est le miroir local : un **cache d'affichage** alimenté par les
+ * notifications de Logto, qui permet de lister et de rechercher des comptes
+ * sans interroger le fournisseur à chaque ligne de tableau. Aucune décision
+ * d'accès ne le lit : l'autorité reste la revendication signée du jeton.
  *
  * ## Montants
  *
@@ -84,16 +89,57 @@ const counterSchema = new Schema<PlatformDoc>(
 export const CounterModel = define("PlatformCounter", counterSchema);
 
 /* ------------------------------------------------------------------ */
+/* Miroir des comptes Logto                                            */
+/* ------------------------------------------------------------------ */
+
+/**
+ * Copie locale des comptes détenus par Logto.
+ *
+ * Elle existe pour une seule raison : le tableau de bord doit lister, chercher
+ * et paginer des comptes, y compris ceux que personne n'a jamais ouverts.
+ * Interroger la Management API à chaque ligne de tableau ferait dépendre chaque
+ * page d'administration de la disponibilité de Logto, et multiplierait les
+ * requêtes réseau.
+ *
+ * **Ce miroir n'a aucune autorité.** Le `role` qu'il conserve sert à trier et à
+ * filtrer une liste ; il n'ouvre aucune porte. Un accès se décide toujours sur
+ * la revendication signée du jeton, jamais ici — sans quoi une ligne modifiée
+ * en base suffirait à fabriquer un administrateur.
+ *
+ * Alimenté par les notifications de Logto (`app/api/webhooks/logto/route.ts`)
+ * et par `scripts/sync-logto-users.mjs` pour le remplissage initial.
+ */
+const appUserSchema = new Schema<PlatformDoc>(
+  {
+    logtoId: { type: String, required: true, unique: true, trim: true },
+    email: { type: String, trim: true, lowercase: true, default: "", index: true },
+    name: { type: String, trim: true, default: "" },
+    role: { type: String, enum: roles, default: "customer", index: true },
+    isSuspended: { type: Boolean, default: false },
+    /*
+     * Un compte supprimé dans Logto est marqué, pas effacé : ses devis, ses
+     * messages et ses factures continuent d'exister et doivent rester
+     * attribuables à un nom dans l'historique.
+     */
+    deletedAt: { type: Date, default: null },
+    syncedAt: { type: Date, default: null },
+  },
+  schemaOptions,
+);
+appUserSchema.index({ role: 1, createdAt: -1 });
+export const AppUserModel = define("AppUser", appUserSchema);
+
+/* ------------------------------------------------------------------ */
 /* Profil client                                                       */
 /* ------------------------------------------------------------------ */
 
 /**
  * Fiche client rattachée à un compte.
  *
- * Tous les champs métier sont facultatifs : l'inscription ne demande qu'un
- * courriel et un mot de passe, le reste se complète progressivement depuis
- * l'espace client. Exiger la raison sociale à l'inscription ferait fuir les
- * prospects qui veulent seulement suivre un devis.
+ * Tous les champs métier sont facultatifs : la création de compte se fait chez
+ * Logto et ne demande qu'une adresse, le reste se complète progressivement
+ * depuis l'espace client. Exiger la raison sociale à l'inscription ferait fuir
+ * les prospects qui veulent seulement suivre un devis.
  */
 const clientProfileSchema = new Schema<PlatformDoc>(
   {
@@ -347,7 +393,7 @@ const quoteActivitySchema = new Schema<PlatformDoc>(
     quoteId: { type: Schema.Types.ObjectId, ref: "QuoteRequest", required: true, index: true },
     type: { type: String, enum: quoteActivityTypes, required: true },
     actorId: userRef,
-    actorRole: { type: String, enum: ["admin", "client", "system"], default: "system" },
+    actorRole: { type: String, enum: ["admin", "customer", "system"], default: "system" },
     /** Contexte structuré : ancien et nouveau statut, numéro de version… */
     metadata: { type: Schema.Types.Mixed, default: {} },
   },
@@ -449,7 +495,7 @@ const conversationMessageSchema = new Schema<PlatformDoc>(
   {
     conversationId: { type: Schema.Types.ObjectId, ref: "Conversation", required: true, index: true },
     senderId: { type: String, required: true },
-    senderRole: { type: String, enum: ["admin", "client"], required: true },
+    senderRole: { type: String, enum: ["admin", "customer"], required: true },
     senderName: { type: String, trim: true, default: "" },
     body: { type: String, required: true },
     attachments: { type: [{ type: Schema.Types.ObjectId, ref: "StoredFile" }], default: [] },

@@ -12,7 +12,9 @@ import { renderEmail } from "@/lib/email/layout";
 import { csvCell } from "@/lib/platform/csv";
 import { readPage, searchRegex, subscriberFilter, quoteFilter } from "@/lib/platform/admin-filters";
 import { checkFile, downloadHeaders, safeFilename } from "@/lib/media/files";
-import { isAdminRole, isStaffRole, normalizeRole } from "@/lib/platform/enums";
+import { isAdminRole, normalizeRole } from "@/lib/platform/enums";
+import { roleFromClaims } from "@/lib/auth/roles";
+import { isHandledLogtoEvent, verifyLogtoSignature } from "@/lib/auth/webhook";
 import { isHandledEvent, verifyWebhookSignature } from "@/lib/email/webhook";
 import { createHmac } from "node:crypto";
 
@@ -26,11 +28,12 @@ import { createHmac } from "node:crypto";
  */
 
 const SECRET = "secret-de-test-suffisamment-long-pour-hmac";
-process.env.BETTER_AUTH_SECRET = SECRET;
+process.env.APP_TOKEN_SECRET = SECRET;
 
-const client = { id: "aaaaaaaaaaaaaaaaaaaaaaaa", role: "client" };
-const other = { id: "bbbbbbbbbbbbbbbbbbbbbbbb", role: "client" };
-const admin = { id: "cccccccccccccccccccccccc", role: "admin" };
+// Les identifiants sont des sujets Logto : chaînes courtes, ni ObjectId ni UUID.
+const client = { id: "usr7h2k9qp4m", role: "customer" };
+const other = { id: "usr3b8n1vx6z", role: "customer" };
+const admin = { id: "usr5d4c2wy8t", role: "admin" };
 
 const NO_OWNERSHIP = { ownsQuote: false, ownsProject: false, ownsConversation: false };
 
@@ -159,9 +162,9 @@ describe("jetons signés", () => {
 
   test("un jeton signé avec un autre secret est rejeté", () => {
     const token = createToken(tokenPurpose.quoteClaim, "devis-1");
-    process.env.BETTER_AUTH_SECRET = "un-autre-secret-tout-aussi-long-mais-different";
+    process.env.APP_TOKEN_SECRET = "un-autre-secret-tout-aussi-long-mais-different";
     assert.equal(readToken(tokenPurpose.quoteClaim, token), null);
-    process.env.BETTER_AUTH_SECRET = SECRET;
+    process.env.APP_TOKEN_SECRET = SECRET;
   });
 });
 
@@ -341,18 +344,73 @@ describe("téléversement de fichiers", () => {
 
 describe("rôles", () => {
   test("un rôle inconnu retombe sur client, jamais sur administrateur", () => {
-    assert.equal(normalizeRole("n-importe-quoi"), "client");
-    assert.equal(normalizeRole(undefined), "client");
-    assert.equal(normalizeRole("user"), "client");
+    assert.equal(normalizeRole("n-importe-quoi"), "customer");
+    assert.equal(normalizeRole(undefined), "customer");
+    // Ancien vocabulaire : les rôles retirés ne doivent rien ouvrir.
+    assert.equal(normalizeRole("client"), "customer");
+    assert.equal(normalizeRole("staff"), "customer");
+    assert.equal(normalizeRole("editor"), "customer");
     assert.equal(isAdminRole("user"), false);
     assert.equal(isAdminRole(null), false);
   });
 
-  test("seul `admin` est administrateur ; l'équipe reste distincte", () => {
+  test("seul `admin` est administrateur", () => {
     assert.equal(isAdminRole("admin"), true);
+    assert.equal(isAdminRole("customer"), false);
     assert.equal(isAdminRole("staff"), false);
-    assert.equal(isStaffRole("staff"), true);
-    assert.equal(isStaffRole("client"), false);
+    assert.equal(isAdminRole("ADMIN"), false);
+  });
+});
+
+describe("rôle issu de la revendication Logto", () => {
+  test("seule la présence du rôle nommé ouvre le tableau de bord", () => {
+    assert.equal(roleFromClaims({ roles: ["admin"] }), "admin");
+    assert.equal(roleFromClaims({ roles: ["customer", "admin"] }), "admin");
+    assert.equal(roleFromClaims({ roles: ["customer"] }), "customer");
+  });
+
+  test("une revendication absente ou mal formée dégrade les droits", () => {
+    assert.equal(roleFromClaims(undefined), "customer");
+    assert.equal(roleFromClaims(null), "customer");
+    assert.equal(roleFromClaims({}), "customer");
+    assert.equal(roleFromClaims({ roles: [] }), "customer");
+    // Portée `roles` oubliée dans la configuration : la revendication manque.
+    assert.equal(roleFromClaims({ roles: "admin" }), "customer");
+    assert.equal(roleFromClaims({ roles: { admin: true } }), "customer");
+    // Un rôle inconnu n'ouvre rien.
+    assert.equal(roleFromClaims({ roles: ["superadmin"] }), "customer");
+  });
+});
+
+describe("signature des notifications Logto", () => {
+  const KEY = "cle-de-signature-de-webhook";
+  const BODY = JSON.stringify({ event: "User.Created", data: { id: "usr7h2k9qp4m" } });
+  const signature = createHmac("sha256", KEY).update(BODY).digest("hex");
+
+  test("une signature valide est acceptée", () => {
+    assert.equal(verifyLogtoSignature({ secret: KEY, signature, body: BODY }).ok, true);
+  });
+
+  test("un corps altéré est rejeté", () => {
+    const tampered = JSON.stringify({ event: "User.Created", data: { id: "usr-de-lattaquant" } });
+    assert.equal(verifyLogtoSignature({ secret: KEY, signature, body: tampered }).ok, false);
+  });
+
+  test("une autre clé est rejetée", () => {
+    assert.equal(verifyLogtoSignature({ secret: "autre-cle", signature, body: BODY }).ok, false);
+  });
+
+  test("sans en-tête ou sans clé configurée, rien ne passe", () => {
+    assert.equal(verifyLogtoSignature({ secret: KEY, signature: null, body: BODY }).ok, false);
+    assert.equal(verifyLogtoSignature({ secret: undefined, signature, body: BODY }).ok, false);
+  });
+
+  test("seuls les événements de compte sont traités", () => {
+    assert.equal(isHandledLogtoEvent("User.Created"), true);
+    assert.equal(isHandledLogtoEvent("User.Data.Updated"), true);
+    assert.equal(isHandledLogtoEvent("User.Deleted"), true);
+    assert.equal(isHandledLogtoEvent("PostSignIn"), false);
+    assert.equal(isHandledLogtoEvent(undefined), false);
   });
 });
 

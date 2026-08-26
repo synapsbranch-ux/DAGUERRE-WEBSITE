@@ -64,7 +64,7 @@ export default async function PortalQuoteDetailPage({
 
   // La consultation vaut lecture : le compteur de non-lus retombe à zéro.
   if (conversationId && Number(conversation?.unreadForClient ?? 0) > 0) {
-    await markConversationRead(conversationId, "client");
+    await markConversationRead(conversationId, "customer");
   }
 
   // Le premier affichage par le client est daté, pour l'administration.
@@ -135,7 +135,7 @@ export default async function PortalQuoteDetailPage({
               <MessageThread
                 messages={messages}
                 locale={locale}
-                viewerRole="client"
+                viewerRole="customer"
                 emptyLabel={dict.platform.messages.emptyBody}
               />
 

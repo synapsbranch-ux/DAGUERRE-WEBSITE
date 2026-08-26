@@ -8,16 +8,16 @@
     "start": "next start",
     "lint": "eslint",
     "typecheck": "tsc --noEmit",
-    "bootstrap:admin": "node scripts/bootstrap-admin.mjs",
     "seed": "node scripts/seed-content.mjs",
     "images:compress": "node scripts/compress-images.mjs",
-    "test": "tsx --test tests/*.test.ts"
+    "test": "tsx --test tests/*.test.ts",
+    "sync:users": "node scripts/sync-logto-users.mjs"
   },
   "dependencies": {
     "@gsap/react": "^2.1.2",
     "@liquefy-ui/react": "^0.2.0",
+    "@logto/next": "^4.2.10",
     "@radix-ui/react-use-controllable-state": "^1.2.6",
-    "better-auth": "^1.7.1",
     "class-variance-authority": "^0.7.1",
     "clsx": "^2.1.1",
     "dither-plugin": "^1.1.1",

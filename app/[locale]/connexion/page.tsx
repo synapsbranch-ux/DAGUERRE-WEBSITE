@@ -1,21 +1,26 @@
 import type { Metadata } from "next";
 import { redirect } from "next/navigation";
 
-import { AuthShell } from "@/components/account/AuthShell";
-import { SignInForm } from "@/components/account/SignInForm";
+import { AuthShell, AuthFooterLink } from "@/components/account/AuthShell";
+import { Button } from "@/components/ui/button";
 import { getDictionaryFor } from "@/lib/dictionaries";
 import { isLocale } from "@/lib/i18n";
 import { readPlatformSession, safeNextPath } from "@/lib/platform/access";
-import { isAdminRole } from "@/lib/platform/enums";
+import { landingHref } from "@/lib/platform/landing";
 import { href } from "@/lib/routes";
 import { createMetadata } from "@/lib/seo";
 
 /**
- * Connexion — page unique du site.
+ * Connexion — tremplin vers Logto.
  *
- * Le tableau de bord et l'espace client partagent la même identité : deux
- * écrans de connexion, ce serait deux implémentations à sécuriser et deux
- * endroits où corriger la même faille.
+ * L'écran de saisie appartient au fournisseur d'identité : aucun mot de passe
+ * n'est jamais tapé sur ce domaine, donc aucun n'y transite ni n'y est stocké.
+ * Cette page ne fait que deux choses — renvoyer un visiteur déjà connecté là
+ * où il allait, et rediriger les autres vers Logto en conservant leur
+ * destination.
+ *
+ * Elle reste une vraie page, avec ses URL bilingues (`/fr/connexion`,
+ * `/en/login`) : tous les liens du site y mènent, et le fil d'Ariane en dépend.
  */
 export async function generateMetadata({ params }: PageProps<"/[locale]/connexion">): Promise<Metadata> {
   const { locale } = await params;
@@ -35,28 +40,41 @@ export default async function SignInPage({ params, searchParams }: PageProps<"/[
   if (!isLocale(locale)) redirect("/");
 
   const query = await searchParams;
-  const dict = await getDictionaryFor(locale);
-  const portalHref = href("portal", locale);
   const nextPath = safeNextPath(query.suivant, "");
-
-  // Déjà connecté : inutile de redemander un mot de passe.
   const session = await readPlatformSession();
-  if (session) redirect(nextPath || (isAdminRole(session.user.role) ? "/admin" : portalHref));
 
-  return (
-    <AuthShell
-      eyebrow={dict.platform.portal.title}
-      title={dict.platform.auth.signInTitle}
-      lead={dict.platform.auth.signInLead}
-    >
-      <SignInForm
-        dict={dict}
-        forgotHref={href("forgotPassword", locale)}
-        registerHref={href("register", locale)}
-        fallbackHref={portalHref}
-        nextPath={nextPath}
-        initialError={query.error === "forbidden" ? dict.platform.auth.forbidden : undefined}
-      />
-    </AuthShell>
-  );
+  /*
+   * Compte connecté mais sans les droits demandés. Le renvoyer vers Logto ne
+   * changerait rien à son rôle : il reviendrait ici, et la boucle tournerait
+   * indéfiniment. On lui dit ce qui se passe, et on lui propose la porte qui
+   * lui est ouverte.
+   */
+  if (session && query.error === "forbidden") {
+    const dict = await getDictionaryFor(locale);
+    return (
+      <AuthShell
+        eyebrow={dict.platform.portal.title}
+        title={dict.platform.auth.forbiddenTitle}
+        lead={dict.platform.auth.forbidden}
+        footer={
+          <AuthFooterLink
+            label={dict.platform.auth.wrongAccount}
+            href={`/api/auth/sign-out?langue=${locale}`}
+            cta={dict.platform.auth.signOut}
+          />
+        }
+      >
+        <Button asChild>
+          <a href={href("portal", locale)}>{dict.platform.portal.title}</a>
+        </Button>
+      </AuthShell>
+    );
+  }
+
+  // Déjà connecté : inutile de repasser par le fournisseur.
+  if (session) redirect(nextPath || (await landingHref(session.user, null)));
+
+  const target = new URLSearchParams({ langue: locale });
+  if (nextPath) target.set("suivant", nextPath);
+  redirect(`/api/auth/sign-in?${target.toString()}`);
 }

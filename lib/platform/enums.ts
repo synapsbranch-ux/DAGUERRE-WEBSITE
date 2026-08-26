@@ -27,33 +27,34 @@ export function isMember<T extends readonly string[]>(values: T, value: unknown)
 /* ------------------------------------------------------------------ */
 
 /**
- * Rôles applicatifs. `editor` et `staff` ne sont pas encore attribuables
- * depuis une interface, mais les gardes les connaissent déjà : ajouter un
- * membre d'équipe ne demandera pas de revoir chaque contrôle d'accès.
+ * Rôles applicatifs — exactement deux, et ils sont **détenus par Logto**.
+ *
+ * L'application ne les écrit jamais dans sa propre base : elle lit la
+ * revendication `roles` de l'ID token, signée par le fournisseur d'identité.
+ * Le miroir `AppUser` en conserve une copie pour trier et rechercher dans le
+ * tableau de bord, jamais pour décider d'un accès.
  */
-export const roles = ["admin", "editor", "staff", "client"] as const;
+export const roles = ["admin", "customer"] as const;
 export type Role = (typeof roles)[number];
 
-/** Rôles disposant du tableau de bord. */
-export const staffRoles: readonly Role[] = ["admin", "editor", "staff"];
+export const roleLabels: Labels<Role> = {
+  admin: { fr: "Administrateur", en: "Administrator" },
+  customer: { fr: "Client", en: "Customer" },
+};
 
 /**
  * Un compte sans rôle reconnu est un client.
  *
- * Les comptes créés avant l'ouverture de l'espace client portent `user` :
- * les traiter comme clients évite une migration, et surtout évite qu'une
- * valeur inattendue ouvre par défaut le tableau de bord.
+ * Normalisation fermée : une valeur inattendue — rôle Logto renommé, portée
+ * `roles` oubliée dans la configuration, charge utile tronquée — dégrade les
+ * droits au lieu de les élargir. Elle n'ouvre jamais le tableau de bord.
  */
 export function normalizeRole(value: unknown): Role {
-  return isMember(roles, value) ? value : "client";
+  return isMember(roles, value) ? value : "customer";
 }
 
 export function isAdminRole(value: unknown): boolean {
   return normalizeRole(value) === "admin";
-}
-
-export function isStaffRole(value: unknown): boolean {
-  return staffRoles.includes(normalizeRole(value));
 }
 
 /* ------------------------------------------------------------------ */

@@ -168,7 +168,7 @@ export async function POST(request: Request) {
   const quoteId = String(quote._id);
   const quoteNumber = String(quote.get("quoteNumber"));
 
-  await logQuoteActivity(quoteId, "created", { id: userId, email: data.email, role: userId ? "client" : "system" });
+  await logQuoteActivity(quoteId, "created", { id: userId, email: data.email, role: userId ? "customer" : "system" });
 
   for (const file of prepared) {
     try {
@@ -188,7 +188,7 @@ export async function POST(request: Request) {
       await logQuoteActivity(
         quoteId,
         "file_uploaded",
-        { id: userId, email: data.email, role: userId ? "client" : "system" },
+        { id: userId, email: data.email, role: userId ? "customer" : "system" },
         { filename: file.original },
       );
     } catch (error) {

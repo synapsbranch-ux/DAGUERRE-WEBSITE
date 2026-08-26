@@ -61,7 +61,7 @@ export async function POST(request: Request) {
   });
 
   const conversationId = String(conversation._id);
-  await appendMessage(conversationId, { id: user.id, name: user.name || user.email, role: "client" }, data.body);
+  await appendMessage(conversationId, { id: user.id, name: user.name || user.email, role: "customer" }, data.body);
 
   const alert = adminNotificationAddress();
   if (alert) {

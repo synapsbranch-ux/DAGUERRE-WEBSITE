@@ -27,7 +27,7 @@ type Doc = Record<string, unknown>;
 /** Ajoute un message et met à jour la conversation en une seule écriture. */
 export async function appendMessage(
   conversationId: string,
-  sender: { id: string; name: string; role: "admin" | "client" },
+  sender: { id: string; name: string; role: "admin" | "customer" },
   body: string,
   attachments: string[] = [],
 ): Promise<string> {
@@ -54,7 +54,7 @@ export async function appendMessage(
 /** Remet à zéro le compteur de non-lus du lecteur. */
 export async function markConversationRead(
   conversationId: string,
-  reader: "admin" | "client",
+  reader: "admin" | "customer",
 ): Promise<void> {
   await ConversationModel.updateOne(
     { _id: conversationId },

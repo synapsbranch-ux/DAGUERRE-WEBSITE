@@ -53,12 +53,12 @@ export async function POST(request: Request, { params }: Ctx) {
 
   if (!conversation) return notFoundResponse();
 
-  await appendMessage(id, { id: user.id, name: user.name || user.email, role: "client" }, parsed.data.body);
-  await markConversationRead(id, "client");
+  await appendMessage(id, { id: user.id, name: user.name || user.email, role: "customer" }, parsed.data.body);
+  await markConversationRead(id, "customer");
 
   const quoteId = conversation.quoteId ? String(conversation.quoteId) : "";
   if (quoteId) {
-    await logQuoteActivity(quoteId, "message_sent", { id: user.id, email: user.email, role: "client" });
+    await logQuoteActivity(quoteId, "message_sent", { id: user.id, email: user.email, role: "customer" });
   }
 
   const alert = adminNotificationAddress();
