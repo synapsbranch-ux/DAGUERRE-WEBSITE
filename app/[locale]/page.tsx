@@ -4,6 +4,7 @@ import type { ReactNode } from "react";
 import { AboutPreview } from "@/components/sections/AboutPreview";
 import { BlogPreview } from "@/components/sections/BlogPreview";
 import { ContactCTA } from "@/components/sections/ContactCTA";
+import { NewsletterPreview } from "@/components/sections/NewsletterPreview";
 import { DataklePreview } from "@/components/sections/DataklePreview";
 import { EngagementPreview } from "@/components/sections/EngagementPreview";
 import { Hero } from "@/components/sections/Hero";
@@ -63,6 +64,7 @@ const defaultOrder = [
   "about",
   "engagement",
   "blog",
+  "newsletter",
   "contact",
 ] as const;
 
@@ -140,6 +142,9 @@ export default async function Home() {
     ),
     expertise: <SkillsPreview key="expertise" locale={locale} dict={dict} groups={skills} section={section("expertise")} />,
     blog: <BlogPreview key="blog" locale={locale} dict={dict} posts={posts} section={section("blog")} />,
+    newsletter: (
+      <NewsletterPreview key="newsletter" locale={locale} dict={dict} section={section("newsletter")} />
+    ),
     contact: <ContactCTA key="contact" locale={locale} dict={dict} fullBleed />,
   };
 

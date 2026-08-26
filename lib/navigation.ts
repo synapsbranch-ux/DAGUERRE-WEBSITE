@@ -1,3 +1,5 @@
+import { tryConnectToDatabase } from "@/lib/db/client";
+import { ContentResourceModel } from "@/lib/db/models/platform";
 import {
   getPage,
   getPosts,
@@ -24,7 +26,7 @@ import type { RouteKey } from "@/lib/routes";
 export type PopulatedRoutes = Partial<Record<RouteKey, boolean>>;
 
 export async function getPopulatedRoutes(locale: Locale): Promise<PopulatedRoutes> {
-  const [posts, projects, services, research, skills, links, engagement, cv] = await Promise.all([
+  const [posts, projects, services, research, skills, links, engagement, cv, resources] = await Promise.all([
     getPosts(locale),
     getProjects(locale),
     getServices(locale),
@@ -33,6 +35,7 @@ export async function getPopulatedRoutes(locale: Locale): Promise<PopulatedRoute
     getSocialLinks(),
     getPage("engagement", locale),
     getPage("cv", locale),
+    countPublishedResources(),
   ]);
 
   const hasBody = (page: Awaited<ReturnType<typeof getPage>>) =>
@@ -47,5 +50,26 @@ export async function getPopulatedRoutes(locale: Locale): Promise<PopulatedRoute
     links: links.length > 0,
     engagement: hasBody(engagement),
     cv: hasBody(cv),
+    resources: resources > 0,
   };
+}
+
+/**
+ * Ressources publiques réellement publiées.
+ *
+ * Seules les ressources `public` sont comptées : une bibliothèque qui ne
+ * contiendrait que des documents réservés ne doit pas être annoncée dans la
+ * navigation d'un visiteur anonyme, qui n'y verrait rien.
+ */
+async function countPublishedResources(): Promise<number> {
+  if (!(await tryConnectToDatabase())) return 0;
+  try {
+    return await ContentResourceModel.countDocuments({
+      status: "published",
+      visibility: "public",
+      publishedAt: { $lte: new Date() },
+    });
+  } catch {
+    return 0;
+  }
 }

@@ -13,6 +13,15 @@ import { cn } from "@/lib/utils";
 type NavUser = { name: string; email: string };
 
 /**
+ * Compteurs affichés en pastille, indexés par chemin de section.
+ *
+ * Seuls les éléments **actionnables** y figurent — devis en attente,
+ * conversations non lues, messages de contact nouveaux. Compter tout le
+ * contenu d'une section produirait une pastille permanente, donc invisible.
+ */
+export type NavCounts = Record<string, number>;
+
+/**
  * Navigation du tableau de bord.
  *
  * Sur grand écran c'est une colonne fixe ; en dessous de `lg`, le même contenu
@@ -20,7 +29,7 @@ type NavUser = { name: string; email: string };
  * porte `aria-current="page"` : sans lui, un lecteur d'écran ne peut pas dire
  * où l'on se trouve.
  */
-export function AdminNav({ user }: { user: NavUser }) {
+export function AdminNav({ user, counts }: { user: NavUser; counts?: NavCounts }) {
   const [open, setOpen] = useState(false);
 
   return (
@@ -29,7 +38,7 @@ export function AdminNav({ user }: { user: NavUser }) {
         <Link href="/admin" className="font-heading text-xl">
           Daguerre — CMS
         </Link>
-        <NavLinks className="mt-8 flex-1 overflow-y-auto" />
+        <NavLinks className="mt-8 flex-1 overflow-y-auto" counts={counts} />
         <UserBlock user={user} />
       </aside>
 
@@ -48,7 +57,7 @@ export function AdminNav({ user }: { user: NavUser }) {
                 </Link>
               </SheetTitle>
             </SheetHeader>
-            <NavLinks className="mt-6" onNavigate={() => setOpen(false)} />
+            <NavLinks className="mt-6" counts={counts} onNavigate={() => setOpen(false)} />
             <UserBlock user={user} className="mt-6" />
           </SheetContent>
         </Sheet>
@@ -60,7 +69,15 @@ export function AdminNav({ user }: { user: NavUser }) {
   );
 }
 
-function NavLinks({ className, onNavigate }: { className?: string; onNavigate?: () => void }) {
+function NavLinks({
+  className,
+  counts,
+  onNavigate,
+}: {
+  className?: string;
+  counts?: NavCounts;
+  onNavigate?: () => void;
+}) {
   const pathname = usePathname();
 
   return (
@@ -74,6 +91,7 @@ function NavLinks({ className, onNavigate }: { className?: string; onNavigate?: 
               .map((section) => {
                 const href = `/admin/${section.path}`;
                 const active = pathname === href || pathname.startsWith(`${href}/`);
+                const count = counts?.[section.path] ?? 0;
                 return (
                   <li key={section.path}>
                     <Link
@@ -81,11 +99,21 @@ function NavLinks({ className, onNavigate }: { className?: string; onNavigate?: 
                       onClick={onNavigate}
                       aria-current={active ? "page" : undefined}
                       className={cn(
-                        "block rounded-md px-3 py-2 text-sm transition-colors",
+                        "flex items-center justify-between gap-2 rounded-md px-3 py-2 text-sm transition-colors",
                         active ? "bg-foreground text-background" : "hover:bg-foreground/7",
                       )}
                     >
-                      {section.label}
+                      <span>{section.label}</span>
+                      {count > 0 ? (
+                        <span
+                          className={cn(
+                            "inline-flex min-w-5 items-center justify-center rounded-full px-1.5 py-0.5 text-[11px] font-medium",
+                            active ? "bg-background/25" : "bg-foreground/10",
+                          )}
+                        >
+                          {count}
+                        </span>
+                      ) : null}
                     </Link>
                   </li>
                 );

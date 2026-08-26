@@ -4,6 +4,7 @@ import {
   FileText,
   FolderKanban,
   HandHeart,
+  Library,
   Link2,
   type LucideIcon,
   Microscope,
@@ -31,10 +32,18 @@ export const mainNavKeys: RouteKey[] = [
 ];
 
 /** Entrées secondaires, présentes seulement dans le pied de page. */
-export const secondaryNavKeys: RouteKey[] = ["engagement", "cv", "skills", "research", "links"];
+export const secondaryNavKeys: RouteKey[] = [
+  "resources",
+  "engagement",
+  "cv",
+  "skills",
+  "research",
+  "links",
+];
 
 /** Icône lucide associée à chaque route navigable. */
 export const navIcons: Partial<Record<RouteKey, LucideIcon>> = {
+  resources: Library,
   about: User,
   projects: FolderKanban,
   datakle: Building2,

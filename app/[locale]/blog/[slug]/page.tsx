@@ -1,5 +1,7 @@
 import type { Metadata } from "next";
 import Link from "next/link";
+
+import { NewsletterSignup } from "@/components/newsletter/NewsletterSignup";
 import { notFound } from "next/navigation";
 import { EditorialImage } from "@/components/motion/EditorialImage";
 import { ArticleMarkdown } from "@/components/sections/ArticleMarkdown";
@@ -125,6 +127,15 @@ export default async function ArticlePage({ params }: PageProps<"/[locale]/blog/
             ) : (
               <p className="text-sm text-muted-foreground">{dict.common.empty}</p>
             )}
+          </Section>
+
+          <Section
+            title={dict.platform.newsletter.title}
+            description={dict.platform.newsletter.lead}
+          >
+            <div className="max-w-xl">
+              <NewsletterSignup dict={dict} locale={locale} source="article" />
+            </div>
           </Section>
 
           {related.length > 0 ? (

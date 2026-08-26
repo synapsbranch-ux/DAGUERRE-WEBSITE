@@ -1,4 +1,5 @@
 import type { Dictionary } from "@/lib/dictionaries/fr";
+import { platformEn } from "@/lib/dictionaries/platform-en";
 
 /**
  * English dictionary.
@@ -7,6 +8,8 @@ import type { Dictionary } from "@/lib/dictionaries/fr";
  * identical to `fr.ts` — a missing key becomes a build error.
  */
 export const en = {
+  platform: platformEn,
+
   common: {
     skipToContent: "Skip to content",
     menu: "Menu",

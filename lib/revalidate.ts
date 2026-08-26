@@ -28,6 +28,7 @@ const listPaths: Record<string, string[]> = {
   projects: ["/realisations"],
   services: ["/datakle", "/datakle/services"],
   research: ["/recherche"],
+  resources: ["/ressources"],
   skills: ["/competences"],
   social: ["/liens"],
   media: [],
@@ -45,13 +46,14 @@ const detailPrefix: Record<string, string> = {
   posts: "/blog",
   projects: "/realisations",
   services: "/datakle/services",
+  resources: "/ressources",
 };
 
 /** Ressources dont la modification change l'en-tête ou le pied de page. */
 const layoutWide = new Set(["settings", "profile", "social"]);
 
 /** Ressources listées dans le sitemap. */
-const inSitemap = new Set(["posts", "projects", "services", "settings"]);
+const inSitemap = new Set(["posts", "projects", "services", "resources", "settings"]);
 
 export function revalidateContent(kind: string, options: RevalidateOptions = {}) {
   const lists = listPaths[kind] ?? [];

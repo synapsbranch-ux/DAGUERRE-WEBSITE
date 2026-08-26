@@ -15,7 +15,7 @@ import {
 import { JsonLd } from "@/components/seo/JsonLd";
 import { Container } from "@/components/ui/Container";
 import type { Locale } from "@/lib/i18n";
-import { isKnownPath, labelForPath, routes } from "@/lib/routes";
+import { isKnownPath, labelForPath, publicPathname, routes } from "@/lib/routes";
 import { breadcrumbSchema } from "@/lib/schema";
 
 type Crumb = {
@@ -60,7 +60,15 @@ type BreadcrumbsProps = {
  * texte, jamais en lien.
  */
 export function Breadcrumbs({ locale, label }: BreadcrumbsProps) {
-  const pathname = usePathname();
+  /*
+   * Le chemin est normalisé en sa forme publique avant tout usage : pendant le
+   * rendu serveur, `usePathname()` renvoie le chemin **interne** issu de la
+   * réécriture du proxy (`/en/realisations`), alors que le navigateur voit
+   * `/en/portfolio`. Sans cette normalisation, les libellés diffèrent de part
+   * et d'autre et React signale une erreur d'hydratation.
+   */
+  const raw = usePathname();
+  const pathname = raw ? publicPathname(locale, raw) : raw;
 
   if (!pathname || pathname === `/${locale}` || pathname === "/") return null;
 

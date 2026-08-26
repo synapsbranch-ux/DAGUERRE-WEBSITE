@@ -1,4 +1,5 @@
 import { ArrowUpRight, Briefcase, Building2, Layers, Newspaper, UserRound } from "lucide-react";
+import Link from "next/link";
 
 import { LocaleSwitcher } from "@/components/layout/LocaleSwitcher";
 import { MobileNav, type MobileNavSection } from "@/components/layout/MobileNav";
@@ -68,6 +69,14 @@ export function Header({ locale, dict, populated }: HeaderProps) {
         .map((key) => ({ label: routes[key].label[locale], href: href(key, locale) })),
     },
     {
+      title: dict.platform.portal.title,
+      items: [
+        { label: dict.platform.quotes.title, href: href("quote", locale) },
+        { label: dict.platform.resources.title, href: href("resources", locale) },
+        { label: dict.platform.auth.signIn, href: href("login", locale) },
+      ],
+    },
+    {
       title: dict.footer.legal,
       items: legalNavKeys.map((key) => ({ label: routes[key].label[locale], href: href(key, locale) })),
     },
@@ -106,6 +115,17 @@ export function Header({ locale, dict, populated }: HeaderProps) {
               label={dict.common.language}
               className="border-white/18 bg-white/5 text-white"
             />
+            {/*
+              Entrée discrète vers l'espace client : un client existant ne
+              doit pas avoir à chercher où se connecter, mais l'appel à
+              l'action principal reste la prise de contact.
+            */}
+            <Link
+              href={href("login", locale)}
+              className="rounded-full px-3 py-2 text-[13px] font-medium text-white/72 transition-colors hover:text-white"
+            >
+              {dict.platform.portal.title}
+            </Link>
             <LiquidCtaLink
               href={href("contact", locale)}
               iconAfter={<ArrowUpRight aria-hidden="true" className="size-4" />}

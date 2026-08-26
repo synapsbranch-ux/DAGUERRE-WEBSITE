@@ -101,6 +101,13 @@ export default async function AdminSection({
 
   if (item.kind === "messages") return <MessagesList query={query} />;
 
+  /*
+   * Les modules « custom » (devis, clients, infolettre…) ont leur propre route
+   * statique, qui l'emporte sur ce segment dynamique. Y arriver signifie donc
+   * une adresse incomplète — `/admin/newsletter` sans sous-section.
+   */
+  if (item.kind === "custom") notFound();
+
   return <CollectionList section={section} label={item.label} resource={item.resource} query={query} />;
 }
 

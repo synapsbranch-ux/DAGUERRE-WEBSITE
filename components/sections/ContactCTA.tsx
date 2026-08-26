@@ -1,4 +1,5 @@
 import { ArrowUpRight } from "lucide-react";
+import Link from "next/link";
 
 import { LiquidCtaLink } from "@/components/liquefy/LiquidCtaLink";
 import { Container } from "@/components/ui/Container";
@@ -38,14 +39,34 @@ export function ContactCTA({ locale, dict, fullBleed = false }: ContactCTAProps)
           {dict.pages.contact.description}
         </p>
       </div>
-      <LiquidCtaLink
-        href={href("contact", locale)}
-        size="lg"
-        tint={fullBleed ? "#07131f" : undefined}
-        iconAfter={<ArrowUpRight aria-hidden="true" className="size-4" />}
-      >
-        {dict.common.contactCta}
-      </LiquidCtaLink>
+      {/*
+        Deux issues, pas une seule : « parler du projet » pour une prise de
+        contact ouverte, « demander un devis » pour qui sait déjà ce qu'il
+        veut. Sans le second, un prospect prêt à cadrer son besoin repartait
+        vers un formulaire de contact générique.
+      */}
+      <div className="flex flex-wrap items-center gap-4">
+        <LiquidCtaLink
+          href={href("contact", locale)}
+          size="lg"
+          tint={fullBleed ? "#07131f" : undefined}
+          iconAfter={<ArrowUpRight aria-hidden="true" className="size-4" />}
+        >
+          {dict.common.contactCta}
+        </LiquidCtaLink>
+        <Link
+          href={href("quote", locale)}
+          className={cn(
+            "inline-flex items-center gap-1.5 rounded-md border px-5 py-3 text-sm font-medium transition-colors",
+            fullBleed
+              ? "border-[var(--navy-950)]/35 text-[var(--navy-950)] hover:bg-[var(--navy-950)]/8"
+              : "border-border hover:bg-foreground/5",
+          )}
+        >
+          {dict.platform.quotes.title}
+          <ArrowUpRight aria-hidden="true" className="size-4" />
+        </Link>
+      </div>
     </div>
   );
 

@@ -8,6 +8,7 @@ import {
   getServices,
 } from "@/lib/content";
 import { locales, type Locale } from "@/lib/i18n";
+import { listPublicResourceSlugs } from "@/lib/platform/public-resources";
 import { href, routeKeys, routes, type RouteKey } from "@/lib/routes";
 import { absoluteUrl } from "@/lib/site";
 
@@ -58,12 +59,15 @@ export default async function sitemap(): Promise<MetadataRoute.Sitemap> {
     .filter((key) => routes[key].inSitemap)
     .flatMap((key) => localizedEntries(key, { lastModified: now }));
 
-  const [projects, posts, categories, tags, services] = await Promise.all([
+  const [projects, posts, categories, tags, services, resources] = await Promise.all([
     getProjects(),
     getPosts(),
     getBlogCategories(),
     getBlogTags(),
     getServices(),
+    // Seules les ressources **publiques** sont listées : une ressource
+    // réservée aux comptes n'a rien à faire dans un plan de site.
+    listPublicResourceSlugs(),
   ]);
 
   const projectEntries = projects.flatMap((project) =>
@@ -111,6 +115,15 @@ export default async function sitemap(): Promise<MetadataRoute.Sitemap> {
     }),
   );
 
+  const resourceEntries = resources.flatMap((resource) =>
+    localizedEntries("resources", {
+      lastModified: resource.updatedAt,
+      priority: 0.6,
+      changeFrequency: "monthly",
+      segments: { fr: [resource.fr], en: [resource.en || resource.fr] },
+    }),
+  );
+
   return [
     ...staticEntries,
     ...projectEntries,
@@ -118,5 +131,6 @@ export default async function sitemap(): Promise<MetadataRoute.Sitemap> {
     ...categoryEntries,
     ...tagEntries,
     ...serviceEntries,
+    ...resourceEntries,
   ];
 }

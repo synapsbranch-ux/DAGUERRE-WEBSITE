@@ -1,6 +1,7 @@
 import { NextResponse, type NextRequest } from "next/server";
 
 import { isLocale, locales, negotiateLocale, type Locale } from "@/lib/i18n";
+import { PATHNAME_HEADER } from "@/lib/platform/pathname";
 import { toInternalPath, toPublicPath } from "@/lib/routes";
 
 /**
@@ -21,6 +22,17 @@ import { toInternalPath, toPublicPath } from "@/lib/routes";
  */
 export function proxy(request: NextRequest) {
   const { pathname } = request.nextUrl;
+
+  /*
+   * Le tableau de bord n'est pas localisé : il ne reçoit que l'en-tête de
+   * chemin, qui permet à sa garde de renvoyer l'administrateur exactement là
+   * où il allait après sa connexion.
+   */
+  if (pathname === "/admin" || pathname.startsWith("/admin/")) {
+    const headers = new Headers(request.headers);
+    headers.set(PATHNAME_HEADER, pathname);
+    return NextResponse.next({ request: { headers } });
+  }
 
   const firstSegment = pathname.split("/")[1] ?? "";
 
@@ -47,27 +59,39 @@ export function proxy(request: NextRequest) {
     return NextResponse.redirect(url, 308);
   }
 
+  /*
+   * Le chemin public demandé est transmis aux composants serveur.
+   *
+   * Une réécriture masque l'URL réelle, et un layout n'a de toute façon pas
+   * accès au chemin courant. Sans cet en-tête, la garde de l'espace client ne
+   * pourrait pas renvoyer le visiteur sur la page qu'il demandait après sa
+   * connexion.
+   */
+  const headers = new Headers(request.headers);
+  headers.set(PATHNAME_HEADER, pathname);
+
   // Slug public traduit → chemin interne (français).
   const internal = toInternalPath(locale, rest);
   if (internal !== null) {
     const url = request.nextUrl.clone();
     url.pathname = `/${locale}/${internal}`;
-    return NextResponse.rewrite(url);
+    return NextResponse.rewrite(url, { request: { headers } });
   }
 
-  return NextResponse.next();
+  return NextResponse.next({ request: { headers } });
 }
+
 
 export const config = {
   matcher: [
     /*
      * Tout sauf :
      *  - les internes Next (`_next`) et les routes d'API
-     *  - le tableau de bord et la connexion, qui ne sont pas localisés
+     *  - le tableau de bord conserve sa propre branche ci-dessus
      *  - les fichiers de métadonnées servis à la racine
      *  - tout chemin contenant un point (fichiers statiques)
      */
-    "/((?!_next|api|admin|connexion|favicon\\.ico|icon|apple-icon|sitemap\\.xml|robots\\.txt|manifest\\.webmanifest|opengraph-image|.*\\..*).*)",
+    "/((?!_next|api|favicon\\.ico|icon|apple-icon|sitemap\\.xml|robots\\.txt|manifest\\.webmanifest|opengraph-image|.*\\..*).*)",
   ],
 };
 

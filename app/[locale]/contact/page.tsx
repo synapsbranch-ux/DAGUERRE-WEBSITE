@@ -1,13 +1,15 @@
 import type { Metadata } from "next";
+import Link from "next/link";
 
 import { ContactForm } from "@/components/sections/ContactForm";
 import { JsonLd } from "@/components/seo/JsonLd";
 import { Container } from "@/components/ui/Container";
 import { PageHeader } from "@/components/ui/PageHeader";
-import { getDictionary, getDictionaryFor } from "@/lib/dictionaries";
+import { getDictionary, getDictionaryFor, getLocale } from "@/lib/dictionaries";
 import { getSiteSettings, getSocialLinks } from "@/lib/content";
 import { isLocale } from "@/lib/i18n";
 import { contactPageSchema } from "@/lib/schema";
+import { href } from "@/lib/routes";
 import { createMetadata } from "@/lib/seo";
 
 export async function generateMetadata({
@@ -28,7 +30,8 @@ export async function generateMetadata({
 }
 
 export default async function ContactPage() {
-  const [dict, settings, socialLinks] = await Promise.all([
+  const [locale, dict, settings, socialLinks] = await Promise.all([
+    getLocale(),
     getDictionary(),
     getSiteSettings(),
     getSocialLinks(),
@@ -58,7 +61,19 @@ export default async function ContactPage() {
   return (
     <Container>
       <JsonLd data={contactPageSchema()} />
-      <PageHeader eyebrow={page.eyebrow} title={page.title} description={page.description} />
+      <PageHeader eyebrow={page.eyebrow} title={page.title} description={page.description}>
+        {/*
+          Un besoin déjà cadré mérite le formulaire de devis plutôt qu'un
+          message libre : les réponses structurées permettent une estimation,
+          là où un courriel demande trois allers-retours.
+        */}
+        <Link
+          href={href("quote", locale)}
+          className="inline-flex items-center rounded-md border border-border px-5 py-3 text-sm font-medium transition-colors hover:bg-foreground/5"
+        >
+          {dict.platform.quotes.title}
+        </Link>
+      </PageHeader>
 
       <div className="grid gap-14 py-14 sm:py-20 lg:grid-cols-[1fr_460px] lg:gap-18">
         <div>
