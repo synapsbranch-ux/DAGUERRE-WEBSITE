@@ -15,6 +15,15 @@ import {
   quotePriorities,
   quoteStatuses,
   recipientStatuses,
+  invoiceStatuses,
+  paymentMethods,
+  contractSources,
+  contractStatuses,
+  signerStatuses,
+  signatureModes,
+  eventKinds,
+  bookingStatuses,
+  meetingLocations,
   resourceTypes,
   resourceVisibilities,
   roles,
@@ -582,3 +591,277 @@ const adminAuditLogSchema = new Schema<PlatformDoc>(
 );
 adminAuditLogSchema.index({ createdAt: -1 });
 export const AdminAuditLogModel = define("AdminAuditLog", adminAuditLogSchema);
+
+/* ------------------------------------------------------------------ */
+/* Factures                                                            */
+/* ------------------------------------------------------------------ */
+
+/**
+ * Ligne de taxe appliquée à une facture.
+ *
+ * Les taxes sont **copiées dans la facture** au moment de son émission, pas
+ * référencées. Un taux de TVQ qui change l'an prochain ne doit pas réécrire
+ * rétroactivement une facture déjà envoyée : ce que le client a reçu doit
+ * rester ce que la base contient.
+ */
+const invoiceTaxSchema = new Schema<PlatformDoc>(
+  {
+    label: { type: String, required: true, trim: true },
+    /** Taux en points de base : 5 % vaut 500. Entier, donc exact. */
+    rateBasisPoints: { type: Number, required: true, min: 0, max: 100_000 },
+    /** Montant calculé en unités mineures, figé à l'émission. */
+    amount: money,
+    registration: { type: String, trim: true, default: "" },
+  },
+  { _id: false },
+);
+
+const invoiceSchema = new Schema<PlatformDoc>(
+  {
+    invoiceNumber: { type: String, required: true, unique: true, trim: true },
+    clientId: { ...userRef, index: true },
+    /** Coordonnées figées : le client peut changer d'adresse après coup. */
+    billTo: {
+      name: { type: String, trim: true, default: "" },
+      email: { type: String, trim: true, lowercase: true, default: "" },
+      company: { type: String, trim: true, default: "" },
+      address: { type: String, trim: true, default: "" },
+    },
+    quoteRequestId: { type: Schema.Types.ObjectId, ref: "QuoteRequest", default: null, index: true },
+    projectId: { type: Schema.Types.ObjectId, ref: "ClientProject", default: null, index: true },
+    status: { type: String, enum: invoiceStatuses, default: "draft", index: true },
+    currency: { type: String, enum: currencies, default: "CAD" },
+    items: { type: [proposalItemSchema], default: [] },
+    subtotal: money,
+    discount: money,
+    taxes: { type: [invoiceTaxSchema], default: [] },
+    total: money,
+    /** Somme des paiements enregistrés, tenue à jour à chaque écriture. */
+    amountPaid: money,
+    issuedAt: { type: Date, default: null },
+    dueAt: { type: Date, default: null, index: true },
+    paidAt: { type: Date, default: null },
+    notes: { type: String, default: "" },
+    terms: { type: String, default: "" },
+    locale: { type: String, enum: ["fr", "en"], default: "fr" },
+    createdById: userRef,
+    /** PDF scellé, produit à l'émission et jamais régénéré ensuite. */
+    documentFileId: { type: Schema.Types.ObjectId, ref: "StoredFile", default: null },
+  },
+  schemaOptions,
+);
+invoiceSchema.index({ clientId: 1, createdAt: -1 });
+invoiceSchema.index({ status: 1, dueAt: 1 });
+export const InvoiceModel = define("Invoice", invoiceSchema);
+
+/**
+ * Paiement reçu sur une facture.
+ *
+ * Table séparée plutôt qu'un simple champ « payé » : un client peut régler en
+ * plusieurs fois, et chaque encaissement doit garder sa date, son moyen et sa
+ * référence. Le total de la facture s'en déduit, il ne le remplace pas.
+ */
+const invoicePaymentSchema = new Schema<PlatformDoc>(
+  {
+    invoiceId: { type: Schema.Types.ObjectId, ref: "Invoice", required: true, index: true },
+    amount: money,
+    method: { type: String, enum: paymentMethods, default: "transfer" },
+    reference: { type: String, trim: true, default: "" },
+    receivedAt: { type: Date, default: () => new Date() },
+    note: { type: String, default: "" },
+    recordedById: userRef,
+  },
+  schemaOptions,
+);
+export const InvoicePaymentModel = define("InvoicePayment", invoicePaymentSchema);
+
+/* ------------------------------------------------------------------ */
+/* Contrats et signature électronique                                  */
+/* ------------------------------------------------------------------ */
+
+/**
+ * Contrat soumis à signature.
+ *
+ * Deux origines : rédigé ici en Markdown, ou déposé en PDF. Dans les deux cas
+ * l'empreinte SHA-256 du document **présenté aux signataires** est figée à
+ * l'envoi : c'est elle qui permet de prouver, plus tard, que le document signé
+ * est bien celui qui a été soumis.
+ */
+const contractSchema = new Schema<PlatformDoc>(
+  {
+    contractNumber: { type: String, required: true, unique: true, trim: true },
+    title: { type: String, required: true, trim: true },
+    source: { type: String, enum: contractSources, default: "generated" },
+    /** Corps en Markdown, quand le contrat est rédigé ici. */
+    body: { type: String, default: "" },
+    /** PDF d'origine, quand il est déposé. */
+    sourceFileId: { type: Schema.Types.ObjectId, ref: "StoredFile", default: null },
+    /** PDF réellement soumis à signature — figé à l'envoi. */
+    presentedFileId: { type: Schema.Types.ObjectId, ref: "StoredFile", default: null },
+    /** PDF final, signatures et page d'audit incluses. */
+    sealedFileId: { type: Schema.Types.ObjectId, ref: "StoredFile", default: null },
+    /** Empreinte du document présenté, en hexadécimal. */
+    documentHash: { type: String, trim: true, default: "" },
+    status: { type: String, enum: contractStatuses, default: "draft", index: true },
+    clientId: { ...userRef, index: true },
+    quoteRequestId: { type: Schema.Types.ObjectId, ref: "QuoteRequest", default: null },
+    projectId: { type: Schema.Types.ObjectId, ref: "ClientProject", default: null },
+    message: { type: String, default: "" },
+    locale: { type: String, enum: ["fr", "en"], default: "fr" },
+    sentAt: { type: Date, default: null },
+    completedAt: { type: Date, default: null },
+    expiresAt: { type: Date, default: null, index: true },
+    createdById: userRef,
+  },
+  schemaOptions,
+);
+contractSchema.index({ status: 1, createdAt: -1 });
+export const ContractModel = define("Contract", contractSchema);
+
+/**
+ * Partie appelée à signer.
+ *
+ * `email` est la seule identité exigée : un signataire n'a pas besoin de
+ * compte. Ce qui l'autorise, c'est un jeton signé qui le désigne — d'où
+ * l'importance de `tokenVersion` : révoquer un lien, c'est l'incrémenter.
+ *
+ * `ip` et `userAgent` ne sont pas de la télémétrie : ce sont les éléments de
+ * la piste d'audit qui donnent sa valeur probante à une signature simple.
+ */
+const contractSignerSchema = new Schema<PlatformDoc>(
+  {
+    contractId: { type: Schema.Types.ObjectId, ref: "Contract", required: true, index: true },
+    name: { type: String, required: true, trim: true },
+    email: { type: String, required: true, trim: true, lowercase: true },
+    role: { type: String, trim: true, default: "" },
+    /** Ordre d'apposition ; 0 signifie « sans ordre imposé ». */
+    order: { type: Number, default: 0 },
+    status: { type: String, enum: signerStatuses, default: "pending", index: true },
+    mode: { type: String, enum: signatureModes, default: "typed" },
+    /** Nom saisi, ou tracé encodé en PNG base64. */
+    signatureValue: { type: String, default: "" },
+    consentedAt: { type: Date, default: null },
+    viewedAt: { type: Date, default: null },
+    signedAt: { type: Date, default: null },
+    declinedAt: { type: Date, default: null },
+    declineReason: { type: String, default: "" },
+    ip: { type: String, trim: true, default: "" },
+    userAgent: { type: String, trim: true, default: "" },
+    /** Incrémenté pour révoquer les liens déjà envoyés. */
+    tokenVersion: { type: Number, default: 1 },
+    remindedAt: { type: Date, default: null },
+  },
+  schemaOptions,
+);
+contractSignerSchema.index({ contractId: 1, email: 1 }, { unique: true });
+export const ContractSignerModel = define("ContractSigner", contractSignerSchema);
+
+/* ------------------------------------------------------------------ */
+/* Agenda                                                              */
+/* ------------------------------------------------------------------ */
+
+/**
+ * Entrée d'agenda.
+ *
+ * Les instants sont stockés en UTC — un `Date` MongoDB l'est toujours. Le
+ * fuseau n'apparaît qu'à l'affichage et au calcul des créneaux : mélanger les
+ * deux est la source classique du rendez-vous décalé d'une heure au passage à
+ * l'heure d'été.
+ */
+const calendarEventSchema = new Schema<PlatformDoc>(
+  {
+    title: { type: String, required: true, trim: true },
+    description: { type: String, default: "" },
+    kind: { type: String, enum: eventKinds, default: "meeting", index: true },
+    startAt: { type: Date, required: true, index: true },
+    endAt: { type: Date, required: true },
+    allDay: { type: Boolean, default: false },
+    location: { type: String, trim: true, default: "" },
+    clientId: userRef,
+    quoteRequestId: { type: Schema.Types.ObjectId, ref: "QuoteRequest", default: null },
+    projectId: { type: Schema.Types.ObjectId, ref: "ClientProject", default: null },
+    bookingId: { type: Schema.Types.ObjectId, ref: "Booking", default: null, index: true },
+    createdById: userRef,
+  },
+  schemaOptions,
+);
+calendarEventSchema.index({ startAt: 1, endAt: 1 });
+export const CalendarEventModel = define("CalendarEvent", calendarEventSchema);
+
+/**
+ * Plage de disponibilité hebdomadaire.
+ *
+ * Les minutes sont comptées depuis minuit **dans le fuseau de référence**, ce
+ * qui rend la règle stable au changement d'heure : « 9 h à 17 h » reste 9 h à
+ * 17 h locales toute l'année, ce qu'un décalage fixe en UTC ne saurait faire.
+ */
+const availabilityRuleSchema = new Schema<PlatformDoc>(
+  {
+    /** 0 = dimanche, conformément à `Date.getDay()`. */
+    weekday: { type: Number, required: true, min: 0, max: 6, index: true },
+    startMinute: { type: Number, required: true, min: 0, max: 1440 },
+    endMinute: { type: Number, required: true, min: 0, max: 1440 },
+    active: { type: Boolean, default: true },
+  },
+  schemaOptions,
+);
+export const AvailabilityRuleModel = define("AvailabilityRule", availabilityRuleSchema);
+
+/** Type de rencontre proposé à la réservation. */
+const meetingTypeSchema = new Schema<PlatformDoc>(
+  {
+    slug: { type: String, required: true, unique: true, trim: true, lowercase: true },
+    name: localizedString,
+    description: localizedString,
+    durationMinutes: { type: Number, required: true, min: 5, max: 480 },
+    /** Marges avant et après, pour ne pas enchaîner sans respirer. */
+    bufferBefore: { type: Number, default: 0, min: 0, max: 240 },
+    bufferAfter: { type: Number, default: 0, min: 0, max: 240 },
+    /** Délai minimal avant le premier créneau réservable. */
+    minNoticeHours: { type: Number, default: 12, min: 0, max: 720 },
+    /** Horizon de réservation, en jours. */
+    maxDaysAhead: { type: Number, default: 60, min: 1, max: 365 },
+    location: { type: String, enum: meetingLocations, default: "video" },
+    locationDetail: { type: String, trim: true, default: "" },
+    active: { type: Boolean, default: true, index: true },
+    position: { type: Number, default: 0 },
+  },
+  schemaOptions,
+);
+export const MeetingTypeModel = define("MeetingType", meetingTypeSchema);
+
+/**
+ * Rendez-vous réservé.
+ *
+ * L'index unique sur `(startAt, status)` ne suffirait pas à empêcher deux
+ * réservations qui se chevauchent sans commencer à la même seconde : c'est la
+ * vérification de conflit côté serveur, dans la même transaction logique, qui
+ * fait le travail. L'index reste le dernier filet contre le double clic.
+ */
+const bookingSchema = new Schema<PlatformDoc>(
+  {
+    meetingTypeId: { type: Schema.Types.ObjectId, ref: "MeetingType", required: true, index: true },
+    name: { type: String, required: true, trim: true },
+    email: { type: String, required: true, trim: true, lowercase: true, index: true },
+    phone: { type: String, trim: true, default: "" },
+    note: { type: String, default: "" },
+    startAt: { type: Date, required: true, index: true },
+    endAt: { type: Date, required: true },
+    /** Fuseau annoncé par le réservant, pour lui réécrire à son heure. */
+    timezone: { type: String, trim: true, default: "UTC" },
+    locale: { type: String, enum: ["fr", "en"], default: "fr" },
+    status: { type: String, enum: bookingStatuses, default: "confirmed", index: true },
+    clientId: userRef,
+    cancelledAt: { type: Date, default: null },
+    cancelReason: { type: String, default: "" },
+    /** Rend la réservation idempotente sous un double envoi du formulaire. */
+    submissionKey: { type: String, trim: true, default: "" },
+  },
+  schemaOptions,
+);
+bookingSchema.index({ startAt: 1, status: 1 });
+bookingSchema.index(
+  { submissionKey: 1 },
+  { unique: true, partialFilterExpression: { submissionKey: { $type: "string", $gt: "" } } },
+);
+export const BookingModel = define("Booking", bookingSchema);

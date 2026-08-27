@@ -401,6 +401,9 @@ export const notificationTypes = [
   "project_update",
   "resource_available",
   "information_requested",
+  "invoice_issued",
+  "contract_to_sign",
+  "meeting_booked",
 ] as const;
 export type NotificationType = (typeof notificationTypes)[number];
 
@@ -411,6 +414,9 @@ export const notificationTypeLabels: Labels<NotificationType> = {
   project_update: { fr: "Projet mis à jour", en: "Project update" },
   resource_available: { fr: "Nouvelle ressource", en: "New resource" },
   information_requested: { fr: "Information demandée", en: "Information requested" },
+  invoice_issued: { fr: "Nouvelle facture", en: "New invoice" },
+  contract_to_sign: { fr: "Contrat à signer", en: "Contract to sign" },
+  meeting_booked: { fr: "Rendez-vous confirmé", en: "Meeting confirmed" },
 };
 
 /* ------------------------------------------------------------------ */
@@ -454,6 +460,16 @@ export const auditActions = [
   "conversation_status_changed",
   "message_sent",
   "user_role_changed",
+  "invoice_created",
+  "invoice_sent",
+  "invoice_cancelled",
+  "payment_recorded",
+  "contract_created",
+  "contract_sent",
+  "contract_signed",
+  "contract_cancelled",
+  "booking_created",
+  "booking_cancelled",
 ] as const;
 export type AuditAction = (typeof auditActions)[number];
 
@@ -479,4 +495,163 @@ export const auditActionLabels: Labels<AuditAction> = {
   conversation_status_changed: { fr: "Conversation modifiée", en: "Conversation updated" },
   message_sent: { fr: "Message envoyé", en: "Message sent" },
   user_role_changed: { fr: "Rôle modifié", en: "Role changed" },
+  invoice_created: { fr: "Facture créée", en: "Invoice created" },
+  invoice_sent: { fr: "Facture envoyée", en: "Invoice sent" },
+  invoice_cancelled: { fr: "Facture annulée", en: "Invoice cancelled" },
+  payment_recorded: { fr: "Paiement enregistré", en: "Payment recorded" },
+  contract_created: { fr: "Contrat créé", en: "Contract created" },
+  contract_sent: { fr: "Contrat transmis", en: "Contract sent" },
+  contract_signed: { fr: "Contrat signé", en: "Contract signed" },
+  contract_cancelled: { fr: "Contrat annulé", en: "Contract cancelled" },
+  booking_created: { fr: "Rendez-vous réservé", en: "Meeting booked" },
+  booking_cancelled: { fr: "Rendez-vous annulé", en: "Meeting cancelled" },
+};
+
+/* ------------------------------------------------------------------ */
+/* Factures                                                            */
+/* ------------------------------------------------------------------ */
+
+/**
+ * Cycle de vie d'une facture.
+ *
+ * `cancelled` existe parce qu'une facture émise ne se **supprime** pas : la
+ * numérotation comptable doit rester continue et sans trou. On l'annule, la
+ * trace demeure, et le numéro n'est jamais réattribué.
+ */
+export const invoiceStatuses = ["draft", "sent", "partially_paid", "paid", "overdue", "cancelled"] as const;
+export type InvoiceStatus = (typeof invoiceStatuses)[number];
+
+export const invoiceStatusLabels: Labels<InvoiceStatus> = {
+  draft: { fr: "Brouillon", en: "Draft" },
+  sent: { fr: "Envoyée", en: "Sent" },
+  partially_paid: { fr: "Partiellement payée", en: "Partially paid" },
+  paid: { fr: "Payée", en: "Paid" },
+  overdue: { fr: "En retard", en: "Overdue" },
+  cancelled: { fr: "Annulée", en: "Cancelled" },
+};
+
+/**
+ * Transitions autorisées. Un brouillon se modifie et se supprime ; tout le
+ * reste ne fait qu'avancer. `paid` et `cancelled` sont terminaux.
+ */
+export const invoiceTransitions: Record<InvoiceStatus, readonly InvoiceStatus[]> = {
+  draft: ["sent", "cancelled"],
+  sent: ["partially_paid", "paid", "overdue", "cancelled"],
+  partially_paid: ["paid", "overdue", "cancelled"],
+  overdue: ["partially_paid", "paid", "cancelled"],
+  paid: [],
+  cancelled: [],
+};
+
+export const paymentMethods = ["transfer", "cheque", "cash", "card", "other"] as const;
+export type PaymentMethod = (typeof paymentMethods)[number];
+
+export const paymentMethodLabels: Labels<PaymentMethod> = {
+  transfer: { fr: "Virement", en: "Transfer" },
+  cheque: { fr: "Chèque", en: "Cheque" },
+  cash: { fr: "Comptant", en: "Cash" },
+  card: { fr: "Carte", en: "Card" },
+  other: { fr: "Autre", en: "Other" },
+};
+
+/* ------------------------------------------------------------------ */
+/* Contrats et signature électronique                                  */
+/* ------------------------------------------------------------------ */
+
+/** Un contrat est rédigé dans l'application, ou déposé tel quel. */
+export const contractSources = ["generated", "uploaded"] as const;
+export type ContractSource = (typeof contractSources)[number];
+
+export const contractSourceLabels: Labels<ContractSource> = {
+  generated: { fr: "Rédigé ici", en: "Written here" },
+  uploaded: { fr: "PDF déposé", en: "Uploaded PDF" },
+};
+
+export const contractStatuses = [
+  "draft",
+  "sent",
+  "partially_signed",
+  "signed",
+  "declined",
+  "expired",
+  "cancelled",
+] as const;
+export type ContractStatus = (typeof contractStatuses)[number];
+
+export const contractStatusLabels: Labels<ContractStatus> = {
+  draft: { fr: "Brouillon", en: "Draft" },
+  sent: { fr: "En attente de signature", en: "Awaiting signature" },
+  partially_signed: { fr: "Partiellement signé", en: "Partially signed" },
+  signed: { fr: "Signé", en: "Signed" },
+  declined: { fr: "Refusé", en: "Declined" },
+  expired: { fr: "Expiré", en: "Expired" },
+  cancelled: { fr: "Annulé", en: "Cancelled" },
+};
+
+/**
+ * Un contrat signé est **immuable**. Le sceller puis le rouvrir viderait la
+ * signature de son sens : ce que les parties ont approuvé ne peut plus changer.
+ */
+export const contractTransitions: Record<ContractStatus, readonly ContractStatus[]> = {
+  draft: ["sent", "cancelled"],
+  sent: ["partially_signed", "signed", "declined", "expired", "cancelled"],
+  partially_signed: ["signed", "declined", "expired", "cancelled"],
+  signed: [],
+  declined: [],
+  expired: [],
+  cancelled: [],
+};
+
+export const signerStatuses = ["pending", "viewed", "signed", "declined"] as const;
+export type SignerStatus = (typeof signerStatuses)[number];
+
+export const signerStatusLabels: Labels<SignerStatus> = {
+  pending: { fr: "En attente", en: "Pending" },
+  viewed: { fr: "Consulté", en: "Viewed" },
+  signed: { fr: "Signé", en: "Signed" },
+  declined: { fr: "Refusé", en: "Declined" },
+};
+
+/** Comment la signature a été apposée — porté dans la piste d'audit. */
+export const signatureModes = ["typed", "drawn"] as const;
+export type SignatureMode = (typeof signatureModes)[number];
+
+export const signatureModeLabels: Labels<SignatureMode> = {
+  typed: { fr: "Saisie au clavier", en: "Typed" },
+  drawn: { fr: "Tracée", en: "Drawn" },
+};
+
+/* ------------------------------------------------------------------ */
+/* Agenda et rendez-vous                                               */
+/* ------------------------------------------------------------------ */
+
+export const eventKinds = ["meeting", "task", "reminder", "blocked"] as const;
+export type EventKind = (typeof eventKinds)[number];
+
+export const eventKindLabels: Labels<EventKind> = {
+  meeting: { fr: "Rendez-vous", en: "Meeting" },
+  task: { fr: "Tâche", en: "Task" },
+  reminder: { fr: "Rappel", en: "Reminder" },
+  /** Plage rendue indisponible à la réservation, sans être un rendez-vous. */
+  blocked: { fr: "Indisponible", en: "Blocked" },
+};
+
+export const bookingStatuses = ["confirmed", "cancelled", "completed", "no_show"] as const;
+export type BookingStatus = (typeof bookingStatuses)[number];
+
+export const bookingStatusLabels: Labels<BookingStatus> = {
+  confirmed: { fr: "Confirmé", en: "Confirmed" },
+  cancelled: { fr: "Annulé", en: "Cancelled" },
+  completed: { fr: "Honoré", en: "Completed" },
+  no_show: { fr: "Absence", en: "No-show" },
+};
+
+/** Où se tient la rencontre. */
+export const meetingLocations = ["video", "phone", "in_person"] as const;
+export type MeetingLocation = (typeof meetingLocations)[number];
+
+export const meetingLocationLabels: Labels<MeetingLocation> = {
+  video: { fr: "Visioconférence", en: "Video call" },
+  phone: { fr: "Téléphone", en: "Phone" },
+  in_person: { fr: "En personne", en: "In person" },
 };

@@ -37,6 +37,26 @@ export async function nextProjectNumber(now = new Date()): Promise<string> {
   return format("DP", year, await nextSequence(`project:${year}`));
 }
 
+/**
+ * Numéro de facture.
+ *
+ * La séquence est **continue et sans trou** dans l'année : c'est une exigence
+ * comptable dans la plupart des juridictions, et la raison pour laquelle une
+ * facture ne se supprime jamais une fois émise — elle s'annule.
+ */
+export async function nextInvoiceNumber(now = new Date()): Promise<string> {
+  const year = now.getUTCFullYear();
+  return format("DF", year, await nextSequence(`invoice:${year}`));
+}
+
+/** Numéro de contrat. */
+export async function nextContractNumber(now = new Date()): Promise<string> {
+  const year = now.getUTCFullYear();
+  return format("DC", year, await nextSequence(`contract:${year}`));
+}
+
 /** Forme attendue d'un numéro de devis — utilisée par la recherche du CMS. */
 export const quoteNumberPattern = /^DQ-\d{4}-\d{6}$/;
 export const projectNumberPattern = /^DP-\d{4}-\d{6}$/;
+export const invoiceNumberPattern = /^DF-\d{4}-\d{6}$/;
+export const contractNumberPattern = /^DC-\d{4}-\d{6}$/;
