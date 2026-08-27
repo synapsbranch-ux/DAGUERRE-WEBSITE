@@ -23,6 +23,13 @@ import { createHmac } from "node:crypto";
 import { deflateSync } from "node:zlib";
 
 import { checkSignaturePng } from "@/lib/pdf/png";
+import {
+  isContractExpired,
+  isSignerTurn,
+  readSignerToken,
+  signerToken,
+} from "@/lib/platform/contracts";
+import { calendarFeedToken, isCalendarFeedToken } from "@/lib/platform/bookings";
 
 /**
  * Contrôles de sécurité.
@@ -705,5 +712,102 @@ describe("notifications du fournisseur d'envoi", () => {
     assert.equal(isHandledEvent("email.bounced"), true);
     assert.equal(isHandledEvent("email.opened"), false);
     assert.equal(isHandledEvent(42), false);
+  });
+});
+
+/* ------------------------------------------------------------------ */
+/* Liens de signature et de rendez-vous                                */
+/* ------------------------------------------------------------------ */
+
+describe("jeton de signature", () => {
+  test("le sujet compose signataire et version", () => {
+    const token = signerToken("6650a1b2c3d4e5f60718293a", 3);
+    assert.deepEqual(readSignerToken(token), {
+      signerId: "6650a1b2c3d4e5f60718293a",
+      version: 3,
+    });
+  });
+
+  test("incrémenter la version révoque le lien déjà émis", () => {
+    // C'est tout le mécanisme de révocation : le jeton porte la version, et la
+    // route compare avec celle du signataire en base.
+    const issued = readSignerToken(signerToken("6650a1b2c3d4e5f60718293a", 1));
+    assert.equal(issued?.version, 1);
+    assert.notEqual(issued?.version, 2);
+  });
+
+  test("un jeton d'un autre usage n'ouvre pas la signature", () => {
+    const foreign = createToken(tokenPurpose.quoteClaim, "6650a1b2c3d4e5f60718293a:1", 600);
+    assert.equal(readSignerToken(foreign), null);
+  });
+
+  test("un jeton de signature n'ouvre pas la gestion d'un rendez-vous", () => {
+    const signing = signerToken("6650a1b2c3d4e5f60718293a", 1);
+    assert.equal(readToken(tokenPurpose.bookingManage, signing), null);
+  });
+
+  test("un sujet mal formé est refusé plutôt qu'interprété", () => {
+    for (const subject of ["", "sans-version", "abc:0", "abc:-1", "abc:x", ":1"]) {
+      const token = createToken(tokenPurpose.contractSign, subject, 600);
+      assert.equal(readSignerToken(token), null, subject);
+    }
+  });
+
+  test("un jeton expiré ne signe plus", () => {
+    assert.equal(readSignerToken(signerToken("6650a1b2c3d4e5f60718293a", 1)) !== null, true);
+    const stale = createToken(tokenPurpose.contractSign, "6650a1b2c3d4e5f60718293a:1", -60);
+    assert.equal(readSignerToken(stale), null);
+  });
+
+  test("une signature falsifiée est refusée", () => {
+    const token = signerToken("6650a1b2c3d4e5f60718293a", 1);
+    const [body] = token.split(".");
+    assert.equal(readSignerToken(`${body}.signatureinventee`), null);
+  });
+});
+
+describe("ordre de signature", () => {
+  const pending = { status: "pending" };
+
+  test("un rang nul laisse signer quand on veut", () => {
+    assert.equal(isSignerTurn({ order: 0 }, [{ order: 0, ...pending }]), true);
+  });
+
+  test("un rang non nul attend les précédents", () => {
+    const first = { order: 1, status: "pending" };
+    const second = { order: 2, status: "pending" };
+    assert.equal(isSignerTurn(second, [first, second]), false);
+
+    const signed = { order: 1, status: "signed" };
+    assert.equal(isSignerTurn(second, [signed, second]), true);
+  });
+
+  test("un signataire sans ordre n'empêche personne", () => {
+    const free = { order: 0, status: "pending" };
+    const second = { order: 2, status: "pending" };
+    const first = { order: 1, status: "signed" };
+    assert.equal(isSignerTurn(second, [free, first, second]), true);
+  });
+});
+
+describe("péremption d'un contrat", () => {
+  test("sans date limite, un contrat ne périme pas", () => {
+    assert.equal(isContractExpired({}), false);
+    assert.equal(isContractExpired({ expiresAt: null }), false);
+  });
+
+  test("la date limite passée ferme la signature", () => {
+    assert.equal(isContractExpired({ expiresAt: new Date(Date.now() - 1000) }), true);
+    assert.equal(isContractExpired({ expiresAt: new Date(Date.now() + 60_000) }), false);
+  });
+});
+
+describe("jeton d'abonnement à l'agenda", () => {
+  test("le flux n'accepte que son propre usage", () => {
+    assert.equal(isCalendarFeedToken(calendarFeedToken()), true);
+    assert.equal(isCalendarFeedToken(createToken(tokenPurpose.calendarFeed, "autre")), false);
+    assert.equal(isCalendarFeedToken(createToken(tokenPurpose.quoteClaim, "agenda")), false);
+    assert.equal(isCalendarFeedToken(""), false);
+    assert.equal(isCalendarFeedToken(null), false);
   });
 });

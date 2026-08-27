@@ -46,6 +46,11 @@ monde sans moyen de revenir en arrière depuis l'application.
 | Clients | Devis | File des demandes, poste de travail, propositions, conversion en projet |
 | Clients | Projets | Fiche, avancements publiés, documents privés |
 | Clients | Conversations | Boîte de réception client, réponses, fermeture |
+| Clients | Factures | Brouillon, émission avec PDF, encaissements, annulation |
+| Clients | Contrats | Rédaction ou dépôt d'un PDF, envoi en signature, piste d'audit |
+| Rendez-vous | Agenda | Semaine, entrées manuelles, abonnement iCalendar |
+| Rendez-vous | Réservations | Rendez-vous pris en ligne, annulation avec avis |
+| Rendez-vous | Disponibilités | Fuseau, plages hebdomadaires, types de rencontre |
 | Marketing | Abonnés | Recherche, filtres, export CSV, désabonnement, réactivation |
 | Marketing | Campagnes | Rédaction, aperçu, test, envoi, statistiques réelles |
 | Pages | Accueil | Ordre, visibilité et en-têtes de chaque bande |
@@ -53,6 +58,7 @@ monde sans moyen de revenir en arrière depuis l'application.
 | Réglages | Profil | Identité, bios, portrait, formation, expérience |
 | Réglages | Réseaux sociaux | Plateforme, libellé, URL, activation, ordre |
 | Réglages | Paramètres | Identité, coordonnées, hero, URL canonique, SEO, pied de page |
+| Système | Facturation | Identité de l'émetteur, taxes, délai de paiement, mentions |
 | Système | Activité | Journal des actions administratives |
 
 Chaque formulaire est propre à sa ressource : aucun champ n'est détourné d'une
@@ -192,6 +198,90 @@ d'un document client, création d'un projet. Le journal ne contient ni mot de
 passe, ni jeton, ni contenu de message privé — il sert à retracer une décision,
 pas à dupliquer les données qu'elle concerne.
 
+## Factures
+
+Une facture naît **brouillon** : tant qu'elle l'est, tout se modifie et elle se
+supprime. L'émission attribue la date, produit le PDF définitif et l'envoie au
+destinataire.
+
+Après émission, **plus rien ne se modifie**. Ce n'est pas une précaution
+excessive : le client détient une copie, et en réécrire les montants produirait
+un historique qui ne correspond à rien de ce qu'il a reçu. Pour corriger, on
+annule et on réémet — le numéro annulé n'est jamais réattribué, pour que la
+séquence comptable reste continue.
+
+Les paiements s'enregistrent à la main : montant, moyen, référence, date. Le
+solde n'est jamais incrémenté, il se **recalcule** à partir des paiements — ce
+qui reste juste après une correction ou une suppression.
+
+Les taxes, l'identité de l'émetteur et les conditions se règlent dans
+**Système → Facturation**. Une facture émise en garde sa propre copie : changer
+un taux ne réécrit rien de ce qui est déjà parti.
+
+Le planificateur passe en « en retard » les factures échues et non réglées. Sans
+`CRON_SECRET`, ce passage n'a jamais lieu et le statut reste « envoyée ».
+
+## Contrats et signature électronique
+
+Un contrat se **rédige ici** en texte, ou s'obtient en **déposant un PDF**. Dans
+les deux cas la signature se déroule pareil.
+
+À l'envoi, le document soumis est produit une fois, stocké, et son empreinte
+SHA-256 figée. C'est elle qui permet de démontrer plus tard que le document
+signé dérive bien de celui que les parties ont lu. Le contrat n'est plus
+modifiable ensuite.
+
+Chaque partie reçoit un **lien personnel**. Elle n'a pas de compte et n'a pas à
+en créer un : le lien est ce qui l'autorise. On peut imposer un ordre de
+signature par un rang ; le rang `0` laisse signer quand on veut.
+
+**Réémettre les liens** sert à deux choses : relancer une partie, et *révoquer*
+un lien parti à la mauvaise adresse. Les anciens liens cessent d'aboutir à la
+seconde même.
+
+Quand tout le monde a signé, le document est **scellé** : les pages d'origine
+sont conservées telles quelles et une piste d'audit est ajoutée à la suite —
+identité, courriel, horodatage, adresse IP, navigateur, mode de signature,
+empreinte du document. Toutes les parties le reçoivent en pièce jointe.
+
+Un refus interrompt le processus et se consigne au même titre qu'une signature.
+
+**Portée juridique.** Il s'agit d'une signature électronique **simple** au sens
+de la LCCJTI (Québec) et du règlement eIDAS. Elle convient à un contrat
+commercial ordinaire. Ce n'est **pas** une signature avancée ou qualifiée :
+aucun certificat de prestataire de services de confiance n'intervient, et le PDF
+ne porte pas de signature cryptographique au sens de la norme PAdES. Ce que le
+document prouve, c'est la cohérence d'une piste d'audit — pas une identité
+certifiée.
+
+## Agenda et rendez-vous
+
+Trois réglages, dans **Rendez-vous → Disponibilités**, et la page de réservation
+en découle entièrement.
+
+1. **Le fuseau de référence.** C'est en lui que s'expriment vos plages. « 9 h à
+   17 h » y reste 9 h à 17 h toute l'année, y compris après le changement
+   d'heure. Le fuseau du visiteur ne sert qu'à lui afficher les créneaux et à
+   lui écrire.
+2. **Les plages hebdomadaires.** Un jour, une heure de début, une heure de fin.
+3. **Les types de rencontre.** Chacun a sa durée, ses marges avant et après, son
+   délai de prévenance, son horizon de réservation et son adresse publique.
+
+Sans les trois, la page de réservation n'a rien à proposer.
+
+Les **entrées d'agenda** bloquent des créneaux sans toucher aux plages : c'est
+ainsi qu'on retire une matinée précise. Une entrée issue d'une réservation ne se
+déplace ni ne se supprime depuis l'agenda — la personne a reçu une invitation
+pour l'heure convenue, et la bouger dans son dos la laisserait fausse chez elle.
+Pour changer d'heure, on annule et on reprogramme.
+
+**Annuler** un rendez-vous prévient la personne et retire l'entrée de son
+agenda. « Honoré » et « absent » sont des constats internes et n'envoient rien.
+
+L'**abonnement iCalendar** donne une adresse à coller dans Apple Calendrier,
+Google Agenda ou Outlook. Elle contient un jeton : traitez-la comme un mot de
+passe. Elle ne publie ni notes internes ni coordonnées.
+
 ## Ce que l'administration ne peut pas faire
 
 - **Lire un mot de passe.** Ils n'existent pas dans cette base : ils vivent
@@ -200,3 +290,9 @@ pas à dupliquer les données qu'elle concerne.
 - **Modifier une proposition déjà transmise**, ou en remplacer une acceptée.
 - **Créer un compte depuis l'interface.** L'inscription se fait chez Logto ; le
   tableau de bord ne fait qu'attribuer un rôle à un compte existant.
+- **Modifier une facture émise**, ni un contrat parti en signature : les deux
+  sont détenus par un tiers, et les réécrire produirait un document qui ne
+  correspond plus à ce qu'il a reçu.
+- **Rouvrir un contrat signé.** Ce que les parties ont approuvé ne change plus.
+- **Signer à la place d'un signataire.** Chaque signature vient du lien personnel
+  de sa partie, et la piste d'audit consigne d'où elle a été apposée.

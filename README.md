@@ -13,7 +13,12 @@ seul tableau de bord :
   devis, propositions à accepter ou refuser, messagerie, projets, documents,
   notifications, profil ;
 - **le tableau de bord** (`/admin`) — contenus, ressources, clients, devis,
-  propositions, projets, conversations, abonnés, campagnes, activité.
+  propositions, projets, conversations, factures, contrats, agenda,
+  disponibilités, abonnés, campagnes, activité.
+
+S'y ajoutent deux parcours **sans compte**, ouverts par un lien signé : la
+signature d'un contrat par une partie externe (`/signature`) et la prise de
+rendez-vous en ligne (`/rendez-vous`).
 
 ## Prérequis
 
@@ -134,12 +139,14 @@ ou un signalement d'abus ferme définitivement l'adresse côté abonné.
 
 ## Tâches planifiées
 
-Trois travaux doivent tourner régulièrement, et c'est un seul point d'entrée
+Cinq travaux doivent tourner régulièrement, et c'est un seul point d'entrée
 qui les porte :
 
 1. **reprise** d'une campagne interrompue par l'hébergeur ;
 2. **départ** des campagnes programmées ;
-3. **péremption** des propositions dont la date de validité est passée.
+3. **péremption** des propositions dont la date de validité est passée ;
+4. **passage en retard** des factures échues et non réglées ;
+5. **fermeture** des contrats dont la date limite est passée.
 
 Chacun est idempotent : deux exécutions concurrentes ne peuvent pas faire
 partir une campagne deux fois. Fréquence conseillée : toutes les cinq minutes.
@@ -151,8 +158,87 @@ planificateur :
 curl -H "authorization: Bearer $CRON_SECRET" https://exemple.com/api/cron
 ```
 
-**Sans `CRON_SECRET`, ces trois tâches ne tournent jamais** : les campagnes
-programmées ne partent pas, et les propositions n'expirent pas.
+**Sans `CRON_SECRET`, ces cinq tâches ne tournent jamais** : les campagnes
+programmées ne partent pas, les propositions n'expirent pas, aucune facture ne
+passe « en retard », et un contrat périmé reste affiché « en attente de
+signature ».
+
+## Facturation
+
+Les montants sont en **unités mineures entières** (cents) : additionner des
+flottants finit toujours par produire un écart d'un cent qu'aucun comptable
+n'accepte. Les taux de taxe sont en **parties par million**, parce que la TVQ
+vaut 9,975 % — 997,5 points de base, ce qui n'est pas entier et ruinerait
+l'argument.
+
+Les taxes s'appliquent **en parallèle** sur la base imposable, jamais en
+cascade : depuis 2013, la TPS et la TVQ portent toutes deux sur le montant
+avant taxes.
+
+Une facture émise est figée. Elle ne se modifie plus, et son numéro n'est jamais
+réattribué : la séquence comptable doit rester continue. Le montant réglé se
+**recalcule** à partir des paiements plutôt que de s'incrémenter — ce qui reste
+juste après une correction.
+
+Le PDF est produit par `pdf-lib`, sans navigateur sans affichage : quelques
+millisecondes et une trentaine de mégaoctets, contre plusieurs secondes et
+plusieurs centaines pour un Chromium.
+
+## Signature électronique
+
+Une partie externe n'a pas de compte. Ce qui l'autorise, c'est un **jeton signé**
+qui la désigne, et rien d'autre. Trois conséquences tenues dans le code :
+
+- le sujet du jeton compose l'identifiant du signataire **et** la version de son
+  jeton, si bien qu'incrémenter `tokenVersion` révoque d'un coup tous les liens
+  déjà envoyés, sans table de jetons à purger ;
+- le jeton expire — une capacité qui engage une partie n'a pas à être
+  éternelle ;
+- il n'ouvre **que** ce document, et n'accorde aucun droit de lecture ailleurs.
+
+À l'envoi, le PDF réellement soumis est produit une fois, stocké, et son
+empreinte SHA-256 conservée. Le document scellé dérive de celui-là, et le
+prouve.
+
+`pdf-lib` a été retenu pour une raison précise : il sait **ouvrir un PDF déposé
+par un client** et lui ajouter des pages sans réécrire les siennes. Le contenu
+d'origine est préservé octet pour octet ; la piste d'audit est ajoutée à la
+suite, jamais superposée — écrire par-dessus le texte d'un contrat pourrait en
+masquer une clause.
+
+**Un tracé de signature est validé avant d'être conservé.** Le décodeur PNG de
+`pdf-lib` boucle indéfiniment sur certaines entrées malformées : ni `try/catch`
+ni minuterie n'y peuvent quoi que ce soit, JavaScript étant mono-fil. Comme le
+tracé vient d'un signataire sans compte, quelques kilooctets suffiraient à
+immobiliser un travailleur serveur. `lib/pdf/png.ts` décompresse donc lui-même
+le flux avec le zlib natif — qui lève au lieu de boucler — et vérifie que la
+taille obtenue correspond exactement à ce que l'en-tête annonce.
+
+Portée juridique : signature électronique **simple** au sens de la LCCJTI
+(Québec) et du règlement eIDAS. Ni avancée, ni qualifiée, ni PAdES.
+
+## Rendez-vous
+
+Le fuseau horaire est le sujet, pas un détail d'affichage. Une plage « le mardi
+de 9 h à 17 h » est locale au fuseau de l'entreprise et le reste toute l'année ;
+la stocker en UTC la décalerait d'une heure deux fois par an. Les règles sont
+donc en minutes depuis minuit, converties vers UTC **pour une date donnée**, en
+interrogeant le fuseau à cette date-là. `Intl` embarque déjà la base IANA :
+aucune bibliothèque de fuseaux n'est nécessaire, et n'en ajouter aucune évite
+d'en avoir une périmée par rapport à celle du système.
+
+`lib/platform/scheduling.ts` est **pur et sans accès à la base** — les
+intervalles occupés lui sont fournis. C'est ce qui le rend exhaustivement
+testable.
+
+Trois contrôles à la réservation, dont aucun n'est redondant : le créneau est-il
+proposé, est-il encore libre au moment d'écrire, et l'index unique sur la clé de
+soumission pour absorber le double clic. La liste affichée au visiteur n'est
+qu'un confort ; elle peut avoir plusieurs minutes de retard.
+
+L'invitation d'agenda part en pièce jointe (`REQUEST`), et l'annulation aussi
+(`CANCEL`, même UID) — sans quoi l'entrée resterait dans l'agenda du
+destinataire, qui se présenterait.
 
 ## Limitation de débit
 
@@ -178,8 +264,10 @@ pnpm db:indexes
 Mongoose construit ses index paresseusement et **avale l'échec** : un index
 unique refusé — doublons déjà en base, expression rejetée par le serveur —
 laisse l'application tourner sans la contrainte qu'elle croit avoir. Ce script
-les construit, vérifie nommément les quatre contraintes dont dépend la logique
-métier, et sort en erreur si l'une manque. À exécuter au déploiement.
+les construit, vérifie nommément les neuf contraintes dont dépend la logique
+métier — anti-double-soumission d'un devis et d'une réservation, unicité des
+numéros de facture et de contrat, une adresse par signataire — et sort en
+erreur si l'une manque. À exécuter au déploiement.
 
 ## Médias
 
@@ -203,12 +291,16 @@ pnpm test
 pnpm build
 ```
 
-`pnpm test` couvre les fonctions qui décident d'un accès, d'un échappement ou
-d'un montant : contrôle d'accès aux fichiers, jetons signés, redirections,
-échappement du contenu rédigé, machine à états des devis, arithmétique des
-propositions, idempotence des soumissions, table des routes, traduction de la
-revendication de rôle Logto, signature des webhooks, secret des tâches
-planifiées. Ce sont celles où une régression ne se voit pas à l'écran.
+`pnpm test` couvre les fonctions qui décident d'un accès, d'un échappement, d'un
+montant ou d'une heure : contrôle d'accès aux fichiers, jetons signés,
+redirections, échappement du contenu rédigé, machine à états des devis,
+arithmétique des propositions et des factures, idempotence des soumissions,
+table des routes, traduction de la revendication de rôle Logto, signature des
+webhooks, secret des tâches planifiées, validation des images de signature,
+révocation d'un lien de signature, ordre de signature, et calcul des créneaux —
+décalages effectifs, fuseaux à demi-heure, changement d'heure dans les deux
+sens, marges, délai de prévenance, horizon. Ce sont celles où une régression ne
+se voit pas à l'écran.
 
 Si Turbopack est bloqué par les restrictions du bac à sable (PostCSS,
 ouverture de port), `pnpm exec next build --webpack` reste disponible.
@@ -227,5 +319,6 @@ Le dump inclut GridFS : les images téléversées sont couvertes.
 
 ## Documentation
 
-Le guide d'utilisation du tableau de bord — écrans, statuts, archivage,
-médias, messages — est dans [ADMIN_GUIDE.md](ADMIN_GUIDE.md).
+Le guide d'utilisation du tableau de bord — écrans, statuts, archivage, médias,
+messages, factures, contrats, agenda — est dans
+[ADMIN_GUIDE.md](ADMIN_GUIDE.md).
