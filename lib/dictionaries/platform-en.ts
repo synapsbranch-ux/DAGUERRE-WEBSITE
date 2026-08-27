@@ -53,6 +53,7 @@ export const platformEn = {
     signOut: "Sign out",
     noAccount: "No account yet?",
     hasAccount: "Already have an account?",
+    unavailable: "Signing in is temporarily unavailable. Try again in a few minutes.",
     forbiddenTitle: "Access denied",
     forbidden: "This account cannot access the dashboard.",
     wrongAccount: "Not the right account?",

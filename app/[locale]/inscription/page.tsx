@@ -1,6 +1,8 @@
 import type { Metadata } from "next";
 import { redirect } from "next/navigation";
 
+import { AuthShell } from "@/components/account/AuthShell";
+import { isLogtoConfigured } from "@/lib/auth/logto";
 import { getDictionaryFor } from "@/lib/dictionaries";
 import { isLocale } from "@/lib/i18n";
 import { readPlatformSession, safeNextPath } from "@/lib/platform/access";
@@ -33,6 +35,19 @@ export default async function SignUpPage({ params, searchParams }: PageProps<"/[
 
   const query = await searchParams;
   const nextPath = safeNextPath(query.suivant, "");
+
+  if (!isLogtoConfigured()) {
+    const dict = await getDictionaryFor(locale);
+    return (
+      <AuthShell
+        eyebrow={dict.platform.portal.title}
+        title={dict.platform.auth.signUpTitle}
+        lead={dict.platform.auth.unavailable}
+      >
+        <span />
+      </AuthShell>
+    );
+  }
 
   const session = await readPlatformSession();
   if (session) redirect(nextPath || (await landingHref(session.user, null)));

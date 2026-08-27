@@ -2,6 +2,7 @@ import type { Metadata } from "next";
 import { redirect } from "next/navigation";
 
 import { AuthShell, AuthFooterLink } from "@/components/account/AuthShell";
+import { isLogtoConfigured } from "@/lib/auth/logto";
 import { Button } from "@/components/ui/button";
 import { getDictionaryFor } from "@/lib/dictionaries";
 import { isLocale } from "@/lib/i18n";
@@ -41,6 +42,25 @@ export default async function SignInPage({ params, searchParams }: PageProps<"/[
 
   const query = await searchParams;
   const nextPath = safeNextPath(query.suivant, "");
+
+  /*
+   * Le fournisseur d'identité n'est pas configuré. Rediriger vers le point
+   * d'entrée déposerait le visiteur sur une erreur JSON ; on lui dit ce qui se
+   * passe en français, et l'exploitant trouve le détail dans /api/health.
+   */
+  if (!isLogtoConfigured()) {
+    const dict = await getDictionaryFor(locale);
+    return (
+      <AuthShell
+        eyebrow={dict.platform.portal.title}
+        title={dict.platform.auth.signInTitle}
+        lead={dict.platform.auth.unavailable}
+      >
+        <span />
+      </AuthShell>
+    );
+  }
+
   const session = await readPlatformSession();
 
   /*

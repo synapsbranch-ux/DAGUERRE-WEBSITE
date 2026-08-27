@@ -52,6 +52,7 @@ export const platformFr = {
     signOut: "Se déconnecter",
     noAccount: "Pas encore de compte ?",
     hasAccount: "Vous avez déjà un compte ?",
+    unavailable: "La connexion est momentanément indisponible. Réessayez dans quelques minutes.",
     forbiddenTitle: "Accès refusé",
     forbidden: "Ce compte n'a pas accès au tableau de bord.",
     wrongAccount: "Ce n'est pas le bon compte ?",
