@@ -4,6 +4,7 @@ import { requireAdminApi } from "@/lib/admin";
 import { connectToDatabase } from "@/lib/db/client";
 import { NewsletterCampaignModel, NewsletterRecipientModel } from "@/lib/db/models/platform";
 import { readJson, validObjectId } from "@/lib/http";
+import { readSchedule } from "@/lib/platform/schedule";
 import { campaignInputSchema } from "@/lib/validation-platform";
 
 type Ctx = { params: Promise<{ id: string }> };
@@ -30,14 +31,20 @@ export async function PATCH(request: Request, { params }: Ctx) {
   const parsed = campaignInputSchema.safeParse(json.data);
   if (!parsed.success) return NextResponse.json({ error: parsed.error.flatten() }, { status: 400 });
 
+  const schedule = readSchedule(parsed.data.scheduledAt);
+  if ("error" in schedule) return schedule.error;
+
   await connectToDatabase();
 
   const doc = await NewsletterCampaignModel.findOneAndUpdate(
-    { _id: id, status: { $in: ["draft", "ready", "cancelled", "failed"] } },
+    { _id: id, status: { $in: ["draft", "ready", "scheduled", "cancelled", "failed"] } },
     {
       $set: {
         ...parsed.data,
-        scheduledAt: parsed.data.scheduledAt ? new Date(parsed.data.scheduledAt) : null,
+        scheduledAt: schedule.at,
+        // Poser ou retirer la date fait basculer l'état : une campagne dont on
+        // efface l'heure de départ redevient un brouillon, et ne part pas.
+        status: schedule.at ? "scheduled" : "draft",
       },
     },
     { new: true },
@@ -69,13 +76,16 @@ export async function DELETE(_: Request, { params }: Ctx) {
   await connectToDatabase();
   const doc = await NewsletterCampaignModel.findOneAndDelete({
     _id: id,
-    status: { $in: ["draft", "cancelled"] },
+    status: { $in: ["draft", "scheduled", "cancelled"] },
   }).lean();
 
   if (!doc) {
     const exists = await NewsletterCampaignModel.exists({ _id: id });
     return exists
-      ? NextResponse.json({ error: "Seuls un brouillon ou une campagne annulée peuvent être supprimés." }, { status: 409 })
+      ? NextResponse.json(
+          { error: "Seuls un brouillon, une campagne programmée ou annulée peuvent être supprimés." },
+          { status: 409 },
+        )
       : notFound();
   }
 

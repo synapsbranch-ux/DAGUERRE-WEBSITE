@@ -2,12 +2,10 @@ import { NextResponse, after } from "next/server";
 
 import { readSession, requireAdminApi } from "@/lib/admin";
 import { connectToDatabase } from "@/lib/db/client";
-import { NewsletterCampaignModel } from "@/lib/db/models/platform";
 import { isEmailConfigured } from "@/lib/email/provider";
 import { readJson, validObjectId } from "@/lib/http";
 import { recordAudit } from "@/lib/platform/audit";
-import { isMember, type CampaignAudience, campaignAudiences } from "@/lib/platform/enums";
-import { dispatchCampaign, snapshotRecipients } from "@/lib/platform/newsletter";
+import { dispatchCampaign, launchCampaign } from "@/lib/platform/newsletter";
 import { campaignSendSchema } from "@/lib/validation-platform";
 
 type Ctx = { params: Promise<{ id: string }> };
@@ -58,42 +56,25 @@ export async function POST(request: Request, { params }: Ctx) {
 
   await connectToDatabase();
 
-  // Réservation atomique : seul le premier appel fait basculer le statut.
-  const campaign = (await NewsletterCampaignModel.findOneAndUpdate(
-    { _id: id, status: { $in: ["draft", "ready", "failed"] } },
-    { $set: { status: "sending", lastError: "" } },
-    { new: true },
-  ).lean()) as Record<string, unknown> | null;
+  // Réservation atomique et constitution de la liste — partagées avec le
+  // planificateur, pour que les deux voies de départ ne puissent pas diverger.
+  const launched = await launchCampaign(id, ["draft", "ready", "scheduled", "failed"]);
 
-  if (!campaign) {
-    const current = (await NewsletterCampaignModel.findById(id)
-      .select("status")
-      .lean()) as { status?: string } | null;
-    if (!current) return NextResponse.json({ error: "Introuvable" }, { status: 404 });
+  if (!launched.ok) {
+    if (launched.reason === "not_found") {
+      return NextResponse.json({ error: "Introuvable" }, { status: 404 });
+    }
+    if (launched.reason === "already_running") {
+      return NextResponse.json(
+        { error: `Cette campagne est déjà « ${launched.status} ». Aucun second envoi n'a été déclenché.` },
+        { status: 409 },
+      );
+    }
     return NextResponse.json(
-      { error: `Cette campagne est déjà « ${current.status} ». Aucun second envoi n'a été déclenché.` },
-      { status: 409 },
+      { error: "La liste des destinataires n'a pas pu être constituée." },
+      { status: 500 },
     );
   }
-
-  const audienceValue = String(campaign.audienceType ?? "all_active");
-  const audience: CampaignAudience = isMember(campaignAudiences, audienceValue)
-    ? audienceValue
-    : "all_active";
-
-  let recipientCount = 0;
-  try {
-    recipientCount = await snapshotRecipients(id, audience);
-  } catch (error) {
-    await NewsletterCampaignModel.updateOne(
-      { _id: id },
-      { $set: { status: "failed", lastError: "Constitution de la liste impossible." } },
-    );
-    console.error("[newsletter] snapshot impossible :", error);
-    return NextResponse.json({ error: "La liste des destinataires n'a pas pu être constituée." }, { status: 500 });
-  }
-
-  await NewsletterCampaignModel.updateOne({ _id: id }, { $set: { recipientCount } });
 
   const session = await readSession();
   await recordAudit({
@@ -102,7 +83,7 @@ export async function POST(request: Request, { params }: Ctx) {
     action: "newsletter_sent",
     entityType: "NewsletterCampaign",
     entityId: id,
-    metadata: { audience, recipientCount },
+    metadata: { audience: launched.audience, recipientCount: launched.recipientCount },
   });
 
   after(async () => {
@@ -113,5 +94,5 @@ export async function POST(request: Request, { params }: Ctx) {
     }
   });
 
-  return NextResponse.json({ ok: true, recipientCount });
+  return NextResponse.json({ ok: true, recipientCount: launched.recipientCount });
 }

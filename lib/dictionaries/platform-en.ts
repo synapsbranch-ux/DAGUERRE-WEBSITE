@@ -43,40 +43,25 @@ export const platformEn = {
   },
 
   auth: {
+    email: "Email",
     signInTitle: "Sign in",
     signInLead: "Reach your client area to follow your requests and projects.",
     signUpTitle: "Create an account",
     signUpLead: "One account is enough to track quotes, exchange messages and reach reserved resources.",
-    email: "Email",
-    password: "Password",
-    passwordHint: "At least 10 characters.",
-    confirmPassword: "Confirm password",
-    name: "Full name",
     signIn: "Sign in",
     signUp: "Create my account",
     signOut: "Sign out",
-    forgot: "Forgotten password?",
-    forgotTitle: "Forgotten password",
-    forgotLead: "Enter your address: if an account exists, a reset link will be sent to it.",
-    forgotSubmit: "Send the link",
-    forgotSent: "If an account matches this address, an email has just been sent. Check your spam folder too.",
-    resetTitle: "New password",
-    resetLead: "Choose a password for your account.",
-    resetSubmit: "Save the password",
-    resetDone: "Password changed. You can sign in.",
-    resetInvalid: "This reset link has expired or is invalid. Request a new one.",
     noAccount: "No account yet?",
     hasAccount: "Already have an account?",
-    signInFailed: "Sign-in failed. Check your credentials.",
-    signUpFailed: "Sign-up failed. This address may already be in use.",
-    passwordMismatch: "The two passwords do not match.",
+    unavailable: "Signing in is temporarily unavailable. Try again in a few minutes.",
+    forbiddenTitle: "Access denied",
     forbidden: "This account cannot access the dashboard.",
+    wrongAccount: "Not the right account?",
+    linkInvalid: "This link has expired or is invalid. Request a new one.",
     marketingOptIn: "Receive insights and the newsletter",
     marketingHint: "Optional. You can unsubscribe at any time.",
     unverified:
       "Your address is not confirmed yet. Check your inbox to activate every feature.",
-    resendVerification: "Resend the confirmation email",
-    verificationSent: "Confirmation email sent.",
   },
 
   portal: {
@@ -100,7 +85,6 @@ export const platformEn = {
     recentDownloads: "Recent downloads",
     notifications: "Recent activity",
     viewAll: "View all",
-    accountSince: "Account opened on",
   },
 
   quotes: {
@@ -166,7 +150,6 @@ export const platformEn = {
     conversation: "Exchanges",
     accept: "Accept the quote",
     decline: "Decline the quote",
-    askQuestion: "Ask a question",
     acceptTitle: "Accept this proposal?",
     acceptBody:
       "Accepting means agreeing to the content and the amount of the proposal. It is recorded and sent to the team.",
@@ -177,6 +160,8 @@ export const platformEn = {
     acceptedOn: "Accepted on",
     declinedOn: "Declined on",
     validUntil: "Valid until",
+    print: "Print / PDF",
+    printProposal: "Printable version",
     subtotal: "Subtotal",
     discount: "Discount",
     tax: "Tax",
@@ -197,6 +182,7 @@ export const platformEn = {
     subject: "Subject",
     message: "Message",
     reply: "Reply",
+    attach: "Attachments (optional)",
     send: "Send",
     emptyTitle: "No conversation",
     emptyBody: "Your exchanges with the team will appear here.",
@@ -267,7 +253,6 @@ export const platformEn = {
     searchPlaceholder: "Title, description, category…",
     emptyTitle: "No resource",
     emptyBody: "Published documents will appear here.",
-    downloadStarted: "Download started.",
   },
 
   newsletter: {
@@ -289,12 +274,9 @@ export const platformEn = {
       "You will no longer receive the newsletter. Emails about your quotes keep reaching you.",
     unsubscribeInvalid: "This unsubscribe link is invalid.",
     unsubscribeAlready: "This address was already unsubscribed.",
-    resubscribe: "Subscribe again",
   },
 
   status: {
-    actionNeeded: "Action needed",
-    inProgress: "In progress",
     done: "Done",
   },
 } satisfies typeof platformFr;

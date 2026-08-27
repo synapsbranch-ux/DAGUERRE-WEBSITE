@@ -9,7 +9,7 @@ import { ProposalView } from "@/components/quotes/ProposalView";
 import { QuoteTimeline } from "@/components/quotes/QuoteTimeline";
 import { QuoteRequestModel } from "@/lib/db/models/platform";
 import { getDictionaryFor } from "@/lib/dictionaries";
-import { isLocale } from "@/lib/i18n";
+import { isLocale, type Locale } from "@/lib/i18n";
 import { validObjectId } from "@/lib/http";
 import { labelOf, quoteStatusLabels } from "@/lib/platform/enums";
 import { formatBytes, formatDate } from "@/lib/platform/format";
@@ -64,7 +64,7 @@ export default async function PortalQuoteDetailPage({
 
   // La consultation vaut lecture : le compteur de non-lus retombe à zéro.
   if (conversationId && Number(conversation?.unreadForClient ?? 0) > 0) {
-    await markConversationRead(conversationId, "client");
+    await markConversationRead(conversationId, "customer");
   }
 
   // Le premier affichage par le client est daté, pour l'administration.
@@ -103,6 +103,7 @@ export default async function PortalQuoteDetailPage({
               <div className="grid gap-5">
                 <ProposalView proposal={pending} dict={dict} locale={locale} />
                 <ProposalDecision dict={dict} quoteId={id} proposalId={pending.id} />
+                <PrintLink locale={locale} quoteId={id} label={t.printProposal} />
               </div>
             </PortalPanel>
           ) : proposals.length > 0 ? (
@@ -111,6 +112,7 @@ export default async function PortalQuoteDetailPage({
                 {proposals.map((proposal) => (
                   <ProposalView key={proposal.id} proposal={proposal} dict={dict} locale={locale} />
                 ))}
+                <PrintLink locale={locale} quoteId={id} label={t.printProposal} />
               </div>
             </PortalPanel>
           ) : (
@@ -135,14 +137,16 @@ export default async function PortalQuoteDetailPage({
               <MessageThread
                 messages={messages}
                 locale={locale}
-                viewerRole="client"
+                viewerRole="customer"
                 emptyLabel={dict.platform.messages.emptyBody}
               />
 
               {conversationId ? (
                 <MessageComposer
                   endpoint={`/api/client/conversations/${conversationId}/messages`}
+                  uploadEndpoint={`/api/client/conversations/${conversationId}/files`}
                   label={dict.platform.messages.message}
+                  attachLabel={dict.platform.messages.attach}
                   sendLabel={dict.platform.messages.send}
                   sendingLabel={dict.platform.common.sending}
                   errorLabel={dict.platform.common.error}
@@ -190,5 +194,17 @@ export default async function PortalQuoteDetailPage({
         </aside>
       </div>
     </div>
+  );
+}
+
+/** Lien vers la version imprimable, d'où le navigateur produit le PDF. */
+function PrintLink({ locale, quoteId, label }: { locale: Locale; quoteId: string; label: string }) {
+  return (
+    <Link
+      href={`${href("portalQuotes", locale, quoteId)}/imprimer`}
+      className="text-sm underline underline-offset-4"
+    >
+      {label}
+    </Link>
   );
 }

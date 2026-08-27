@@ -122,7 +122,9 @@ export default async function AdminConversationPage({
 
         <MessageComposer
           endpoint={`/api/admin/conversations/${id}/messages`}
+          uploadEndpoint={`/api/admin/conversations/${id}/files`}
           label="Répondre au client"
+          attachLabel="Pièces jointes (facultatif)"
           sendLabel="Envoyer"
           sendingLabel="Envoi…"
           errorLabel="Le message n'a pas pu être envoyé."

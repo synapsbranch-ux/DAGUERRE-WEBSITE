@@ -12,8 +12,13 @@ import { renderEmail } from "@/lib/email/layout";
 import { csvCell } from "@/lib/platform/csv";
 import { readPage, searchRegex, subscriberFilter, quoteFilter } from "@/lib/platform/admin-filters";
 import { checkFile, downloadHeaders, safeFilename } from "@/lib/media/files";
-import { isAdminRole, isStaffRole, normalizeRole } from "@/lib/platform/enums";
+import { isAdminRole, normalizeRole } from "@/lib/platform/enums";
+import { roleFromClaims } from "@/lib/auth/roles";
+import { isHandledLogtoEvent, verifyLogtoSignature } from "@/lib/auth/webhook";
+import { hasCronSecret } from "@/lib/platform/cron";
+import { readSchedule } from "@/lib/platform/schedule";
 import { isHandledEvent, verifyWebhookSignature } from "@/lib/email/webhook";
+import { isEmailConfigured } from "@/lib/email/provider";
 import { createHmac } from "node:crypto";
 
 /**
@@ -26,11 +31,12 @@ import { createHmac } from "node:crypto";
  */
 
 const SECRET = "secret-de-test-suffisamment-long-pour-hmac";
-process.env.BETTER_AUTH_SECRET = SECRET;
+process.env.APP_TOKEN_SECRET = SECRET;
 
-const client = { id: "aaaaaaaaaaaaaaaaaaaaaaaa", role: "client" };
-const other = { id: "bbbbbbbbbbbbbbbbbbbbbbbb", role: "client" };
-const admin = { id: "cccccccccccccccccccccccc", role: "admin" };
+// Les identifiants sont des sujets Logto : chaînes courtes, ni ObjectId ni UUID.
+const client = { id: "usr7h2k9qp4m", role: "customer" };
+const other = { id: "usr3b8n1vx6z", role: "customer" };
+const admin = { id: "usr5d4c2wy8t", role: "admin" };
 
 const NO_OWNERSHIP = { ownsQuote: false, ownsProject: false, ownsConversation: false };
 
@@ -159,9 +165,9 @@ describe("jetons signés", () => {
 
   test("un jeton signé avec un autre secret est rejeté", () => {
     const token = createToken(tokenPurpose.quoteClaim, "devis-1");
-    process.env.BETTER_AUTH_SECRET = "un-autre-secret-tout-aussi-long-mais-different";
+    process.env.APP_TOKEN_SECRET = "un-autre-secret-tout-aussi-long-mais-different";
     assert.equal(readToken(tokenPurpose.quoteClaim, token), null);
-    process.env.BETTER_AUTH_SECRET = SECRET;
+    process.env.APP_TOKEN_SECRET = SECRET;
   });
 });
 
@@ -341,21 +347,176 @@ describe("téléversement de fichiers", () => {
 
 describe("rôles", () => {
   test("un rôle inconnu retombe sur client, jamais sur administrateur", () => {
-    assert.equal(normalizeRole("n-importe-quoi"), "client");
-    assert.equal(normalizeRole(undefined), "client");
-    assert.equal(normalizeRole("user"), "client");
+    assert.equal(normalizeRole("n-importe-quoi"), "customer");
+    assert.equal(normalizeRole(undefined), "customer");
+    // Ancien vocabulaire : les rôles retirés ne doivent rien ouvrir.
+    assert.equal(normalizeRole("client"), "customer");
+    assert.equal(normalizeRole("staff"), "customer");
+    assert.equal(normalizeRole("editor"), "customer");
     assert.equal(isAdminRole("user"), false);
     assert.equal(isAdminRole(null), false);
   });
 
-  test("seul `admin` est administrateur ; l'équipe reste distincte", () => {
+  test("seul `admin` est administrateur", () => {
     assert.equal(isAdminRole("admin"), true);
+    assert.equal(isAdminRole("customer"), false);
     assert.equal(isAdminRole("staff"), false);
-    assert.equal(isStaffRole("staff"), true);
-    assert.equal(isStaffRole("client"), false);
+    assert.equal(isAdminRole("ADMIN"), false);
   });
 });
 
+describe("rôle issu de la revendication Logto", () => {
+  test("seule la présence du rôle nommé ouvre le tableau de bord", () => {
+    assert.equal(roleFromClaims({ roles: ["admin"] }), "admin");
+    assert.equal(roleFromClaims({ roles: ["customer", "admin"] }), "admin");
+    assert.equal(roleFromClaims({ roles: ["customer"] }), "customer");
+  });
+
+  test("une revendication absente ou mal formée dégrade les droits", () => {
+    assert.equal(roleFromClaims(undefined), "customer");
+    assert.equal(roleFromClaims(null), "customer");
+    assert.equal(roleFromClaims({}), "customer");
+    assert.equal(roleFromClaims({ roles: [] }), "customer");
+    // Portée `roles` oubliée dans la configuration : la revendication manque.
+    assert.equal(roleFromClaims({ roles: "admin" }), "customer");
+    assert.equal(roleFromClaims({ roles: { admin: true } }), "customer");
+    // Un rôle inconnu n'ouvre rien.
+    assert.equal(roleFromClaims({ roles: ["superadmin"] }), "customer");
+  });
+});
+
+describe("signature des notifications Logto", () => {
+  const KEY = "cle-de-signature-de-webhook";
+  const BODY = JSON.stringify({ event: "User.Created", data: { id: "usr7h2k9qp4m" } });
+  const signature = createHmac("sha256", KEY).update(BODY).digest("hex");
+
+  test("une signature valide est acceptée", () => {
+    assert.equal(verifyLogtoSignature({ secret: KEY, signature, body: BODY }).ok, true);
+  });
+
+  test("un corps altéré est rejeté", () => {
+    const tampered = JSON.stringify({ event: "User.Created", data: { id: "usr-de-lattaquant" } });
+    assert.equal(verifyLogtoSignature({ secret: KEY, signature, body: tampered }).ok, false);
+  });
+
+  test("une autre clé est rejetée", () => {
+    assert.equal(verifyLogtoSignature({ secret: "autre-cle", signature, body: BODY }).ok, false);
+  });
+
+  test("sans en-tête ou sans clé configurée, rien ne passe", () => {
+    assert.equal(verifyLogtoSignature({ secret: KEY, signature: null, body: BODY }).ok, false);
+    assert.equal(verifyLogtoSignature({ secret: undefined, signature, body: BODY }).ok, false);
+  });
+
+  test("seuls les événements de compte sont traités", () => {
+    assert.equal(isHandledLogtoEvent("User.Created"), true);
+    assert.equal(isHandledLogtoEvent("User.Data.Updated"), true);
+    assert.equal(isHandledLogtoEvent("User.Deleted"), true);
+    assert.equal(isHandledLogtoEvent("PostSignIn"), false);
+    assert.equal(isHandledLogtoEvent(undefined), false);
+  });
+});
+
+
+describe("configuration du courriel", () => {
+  const saved = { ...process.env };
+
+  function reset(env: Record<string, string | undefined>) {
+    for (const key of ["RESEND_API_KEY", "MAIL_FROM", "NODE_ENV"]) delete process.env[key];
+    Object.assign(process.env, env);
+  }
+
+  test("en production, une clé sans expéditeur ne compte pas comme configuré", () => {
+    // Sans MAIL_FROM, l'envoi part de l'adresse partagée de Resend, qui ne
+    // délivre qu'au titulaire du compte : les clients ne recevraient rien, et
+    // sans la moindre erreur.
+    reset({ NODE_ENV: "production", RESEND_API_KEY: "re_test" });
+    assert.equal(isEmailConfigured(), false);
+  });
+
+  test("en production, clé et expéditeur suffisent", () => {
+    reset({ NODE_ENV: "production", RESEND_API_KEY: "re_test", MAIL_FROM: "Daguerre <a@b.co>" });
+    assert.equal(isEmailConfigured(), true);
+  });
+
+  test("hors production, le repli d'expéditeur reste acceptable", () => {
+    reset({ NODE_ENV: "development", RESEND_API_KEY: "re_test" });
+    assert.equal(isEmailConfigured(), true);
+  });
+
+  test("sans clé, rien n'est configuré, même avec un expéditeur", () => {
+    reset({ NODE_ENV: "production", MAIL_FROM: "Daguerre <a@b.co>" });
+    assert.equal(isEmailConfigured(), false);
+
+    Object.assign(process.env, saved);
+  });
+});
+
+describe("secret des tâches planifiées", () => {
+  const SECRET = "secret-de-planificateur-suffisamment-long";
+
+  function request(header: string | null): Request {
+    return new Request("https://exemple.test/api/cron", {
+      headers: header ? { authorization: header } : {},
+    });
+  }
+
+  test("le bon secret passe", () => {
+    process.env.CRON_SECRET = SECRET;
+    assert.equal(hasCronSecret(request(`Bearer ${SECRET}`)), true);
+  });
+
+  test("un mauvais secret, un préfixe absent ou un en-tête vide sont refusés", () => {
+    process.env.CRON_SECRET = SECRET;
+    assert.equal(hasCronSecret(request(`Bearer ${SECRET}x`)), false);
+    assert.equal(hasCronSecret(request(SECRET)), false);
+    assert.equal(hasCronSecret(request(null)), false);
+    // Un préfixe correct ne suffit pas : la comparaison porte sur tout le reste.
+    assert.equal(hasCronSecret(request("Bearer secret-de-planificateur-suffisamment-lonG")), false);
+  });
+
+  test("sans secret configuré, la voie automatique est fermée", () => {
+    delete process.env.CRON_SECRET;
+    assert.equal(hasCronSecret(request(`Bearer ${SECRET}`)), false);
+    // Y compris pour une requête qui n'annonce rien : personne ne passe.
+    assert.equal(hasCronSecret(request(null)), false);
+  });
+});
+
+describe("date de départ programmée", () => {
+  const NOW = Date.parse("2026-08-27T12:00:00Z");
+
+  test("un champ vide ne programme rien", () => {
+    const read = readSchedule(undefined, NOW);
+    assert.ok(!("error" in read));
+    assert.equal(read.at, null);
+    assert.equal((readSchedule("", NOW) as { at: Date | null }).at, null);
+  });
+
+  test("une date future est retenue", () => {
+    const read = readSchedule("2026-08-27T18:00:00Z", NOW);
+    assert.ok(!("error" in read));
+    assert.equal(read.at?.toISOString(), "2026-08-27T18:00:00.000Z");
+  });
+
+  test("une date passée est refusée, jamais lancée immédiatement", () => {
+    const read = readSchedule("2026-08-20T09:00:00Z", NOW);
+    assert.ok("error" in read);
+    assert.equal(read.error.status, 400);
+  });
+
+  test("une tolérance couvre le trajet navigateur → serveur", () => {
+    // Programmé « à l'instant » et arrivé trois secondes plus tard.
+    const read = readSchedule(new Date(NOW - 3_000).toISOString(), NOW);
+    assert.ok(!("error" in read));
+  });
+
+  test("une date illisible est refusée", () => {
+    const read = readSchedule("demain matin", NOW);
+    assert.ok("error" in read);
+    assert.equal(read.error.status, 400);
+  });
+});
 
 describe("notifications du fournisseur d'envoi", () => {
   const secret = "whsec_" + Buffer.from("secret-webhook-de-test").toString("base64");

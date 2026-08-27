@@ -314,3 +314,65 @@
   .image-zoom,
   .group:hover .image-zoom { transform: none !important; }
 }
+/*
+ * Impression.
+ *
+ * Sert la version imprimable des propositions, dont le PDF est produit par le
+ * navigateur. Deux règles font l'essentiel du travail : forcer un fond blanc et
+ * un texte noir — un thème sombre imprimé gaspille l'encre et se lit mal — et
+ * empêcher qu'un tableau de postes se coupe au milieu d'une ligne.
+ */
+@media print {
+  :root {
+    color-scheme: light;
+  }
+
+  html,
+  body {
+    background: #fff !important;
+    color: #000 !important;
+  }
+
+  /* Les éléments d'interface n'ont rien à faire sur le papier. */
+  header[data-site-header],
+  footer[data-site-footer],
+  nav,
+  .print\:hidden {
+    display: none !important;
+  }
+
+  /* Les couleurs de fond des composants ne sont pas imprimées. */
+  * {
+    background: transparent !important;
+    box-shadow: none !important;
+  }
+
+  /* Les bordures restent : elles structurent le tableau des postes. */
+  table,
+  th,
+  td,
+  article,
+  section {
+    border-color: #999 !important;
+  }
+
+  tr,
+  li {
+    break-inside: avoid;
+  }
+
+  thead {
+    display: table-header-group;
+  }
+
+  /* Un lien imprimé sans son adresse est un lien perdu. */
+  a[href^="http"]::after {
+    content: " (" attr(href) ")";
+    font-size: 0.75em;
+    word-break: break-all;
+  }
+
+  @page {
+    margin: 18mm;
+  }
+}

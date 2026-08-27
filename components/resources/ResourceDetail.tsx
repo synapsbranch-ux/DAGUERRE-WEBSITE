@@ -44,6 +44,14 @@ export function ResourceDetail({
         <div className="flex flex-wrap items-center gap-2">
           <Badge variant="secondary">{labelOf(resourceTypeLabels, resource.type, locale)}</Badge>
           {resource.categoryName ? <Badge variant="outline">{resource.categoryName}</Badge> : null}
+          {/*
+           * Une ressource nominative est annoncée comme telle. Un visiteur qui
+           * la voit listée sans le savoir clique, se fait refuser, et conclut à
+           * une panne plutôt qu'à une portée.
+           */}
+          {resource.visibility === "private" ? (
+            <Badge variant="outline">{t.restricted}</Badge>
+          ) : null}
         </div>
 
         <h1 className="mt-5 max-w-4xl font-heading text-4xl leading-[1.05] sm:text-5xl">

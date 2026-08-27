@@ -6,6 +6,7 @@ import { adminNotificationAddress, adminUrl, sendTransactionalEmail } from "@/li
 import { newMessageEmail } from "@/lib/email/templates";
 import { readJson, validObjectId } from "@/lib/http";
 import { isDenied, notFoundResponse, requireSessionApi } from "@/lib/platform/access";
+import { claimAttachments } from "@/lib/platform/attachments";
 import { appendMessage, markConversationRead } from "@/lib/platform/messaging";
 import { logQuoteActivity } from "@/lib/platform/quotes";
 import { clientIp } from "@/lib/http";
@@ -30,7 +31,7 @@ export async function POST(request: Request, { params }: Ctx) {
   if (isDenied(guard)) return guard.denied;
 
   const user = guard.session.user;
-  if (!slidingWindow(`message:${user.id}:${clientIp(request)}`, 30, 10 * 60 * 1000)) {
+  if (!(await slidingWindow(`message:${user.id}:${clientIp(request)}`, 30, 10 * 60 * 1000))) {
     return NextResponse.json({ error: "Trop de messages. Réessayez plus tard." }, { status: 429 });
   }
 
@@ -53,12 +54,24 @@ export async function POST(request: Request, { params }: Ctx) {
 
   if (!conversation) return notFoundResponse();
 
-  await appendMessage(id, { id: user.id, name: user.name || user.email, role: "client" }, parsed.data.body);
-  await markConversationRead(id, "client");
+  // Chaque identifiant reçu est revérifié : seuls les fichiers déposés par cet
+  // expéditeur pour cette conversation sont rattachés.
+  const attachments = await claimAttachments(parsed.data.attachmentFileIds, {
+    conversationId: id,
+    uploadedBy: user.id,
+  });
+
+  await appendMessage(
+    id,
+    { id: user.id, name: user.name || user.email, role: "customer" },
+    parsed.data.body,
+    attachments,
+  );
+  await markConversationRead(id, "customer");
 
   const quoteId = conversation.quoteId ? String(conversation.quoteId) : "";
   if (quoteId) {
-    await logQuoteActivity(quoteId, "message_sent", { id: user.id, email: user.email, role: "client" });
+    await logQuoteActivity(quoteId, "message_sent", { id: user.id, email: user.email, role: "customer" });
   }
 
   const alert = adminNotificationAddress();

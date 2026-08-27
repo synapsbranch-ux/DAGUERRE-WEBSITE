@@ -39,7 +39,7 @@ import { projectNumberPattern, quoteNumberPattern } from "@/lib/platform/numbers
 import { locales } from "@/lib/i18n";
 import { href, publicPathname, routeKeys, routes, toInternalPath, toPublicPath } from "@/lib/routes";
 
-process.env.BETTER_AUTH_SECRET = "secret-de-test-suffisamment-long-pour-hmac";
+process.env.APP_TOKEN_SECRET = "secret-de-test-suffisamment-long-pour-hmac";
 
 describe("machine à états des devis", () => {
   test("les transitions du parcours nominal sont autorisées", () => {
@@ -371,8 +371,6 @@ describe("table des routes", () => {
     for (const key of [
       "login",
       "register",
-      "forgotPassword",
-      "resetPassword",
       "quoteClaim",
       "newsletter",
       "newsletterConfirm",

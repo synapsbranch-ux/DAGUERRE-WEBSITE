@@ -22,6 +22,7 @@ export default async function NewCampaignPage() {
           content: "",
           locale: "fr",
           audienceType: "all_active",
+          scheduledAt: "",
           status: "draft",
         }}
       />

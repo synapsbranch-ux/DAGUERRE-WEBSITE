@@ -25,7 +25,7 @@ export function MessageThread({
   locale: Locale;
   emptyLabel: string;
   /** Détermine de quel côté s'affichent « vos » messages. */
-  viewerRole: "admin" | "client";
+  viewerRole: "admin" | "customer";
 }) {
   if (messages.length === 0) {
     return <p className="text-sm text-muted-foreground">{emptyLabel}</p>;

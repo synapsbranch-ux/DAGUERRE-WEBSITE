@@ -8,16 +8,17 @@
     "start": "next start",
     "lint": "eslint",
     "typecheck": "tsc --noEmit",
-    "bootstrap:admin": "node scripts/bootstrap-admin.mjs",
     "seed": "node scripts/seed-content.mjs",
     "images:compress": "node scripts/compress-images.mjs",
-    "test": "tsx --test tests/*.test.ts"
+    "test": "tsx --test tests/*.test.ts",
+    "sync:users": "node scripts/sync-logto-users.mjs",
+    "db:indexes": "tsx scripts/ensure-indexes.ts"
   },
   "dependencies": {
     "@gsap/react": "^2.1.2",
     "@liquefy-ui/react": "^0.2.0",
+    "@logto/next": "^4.2.10",
     "@radix-ui/react-use-controllable-state": "^1.2.6",
-    "better-auth": "^1.7.1",
     "class-variance-authority": "^0.7.1",
     "clsx": "^2.1.1",
     "dither-plugin": "^1.1.1",
@@ -33,6 +34,7 @@
     "react-dom": "19.2.8",
     "react-markdown": "^10.1.0",
     "react-use-measure": "^2.1.7",
+    "redis": "^6.2.1",
     "remark-gfm": "^4.0.1",
     "shadcn": "^4.19.0",
     "tailwind-merge": "^3.6.0",

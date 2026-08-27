@@ -27,7 +27,7 @@ export async function POST(request: Request) {
   if (isDenied(guard)) return guard.denied;
 
   const user = guard.session.user;
-  if (!slidingWindow(`conversation:${user.id}:${clientIp(request)}`, 10, 60 * 60 * 1000)) {
+  if (!(await slidingWindow(`conversation:${user.id}:${clientIp(request)}`, 10, 60 * 60 * 1000))) {
     return NextResponse.json({ error: "Trop de conversations ouvertes. Réessayez plus tard." }, { status: 429 });
   }
 
@@ -61,7 +61,7 @@ export async function POST(request: Request) {
   });
 
   const conversationId = String(conversation._id);
-  await appendMessage(conversationId, { id: user.id, name: user.name || user.email, role: "client" }, data.body);
+  await appendMessage(conversationId, { id: user.id, name: user.name || user.email, role: "customer" }, data.body);
 
   const alert = adminNotificationAddress();
   if (alert) {

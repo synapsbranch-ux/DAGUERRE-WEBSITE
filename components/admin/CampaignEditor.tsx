@@ -27,6 +27,8 @@ export type CampaignDraft = {
   content: string;
   locale: "fr" | "en";
   audienceType: string;
+  /** Heure locale au format `datetime-local`, vide si aucun départ programmé. */
+  scheduledAt: string;
   status: string;
 };
 
@@ -57,7 +59,7 @@ export function CampaignEditor({
   const [preview, setPreview] = useState<string | null>(null);
   const [testEmail, setTestEmail] = useState("");
 
-  const editable = ["draft", "ready", "cancelled", "failed"].includes(draft.status);
+  const editable = ["draft", "ready", "scheduled", "cancelled", "failed"].includes(draft.status);
 
   const set =
     <K extends keyof CampaignDraft>(key: K) =>
@@ -71,7 +73,12 @@ export function CampaignEditor({
     content: draft.content,
     locale: draft.locale,
     audienceType: draft.audienceType,
-    scheduledAt: "",
+    /*
+     * Le champ est saisi en heure locale (`datetime-local` n'a pas de fuseau).
+     * On le convertit en instant absolu avant l'envoi : sans cela, une campagne
+     * programmée à 9 h partirait à 9 h UTC, soit 4 h du matin à Montréal.
+     */
+    scheduledAt: draft.scheduledAt ? new Date(draft.scheduledAt).toISOString() : "",
   });
 
   async function save() {
@@ -207,6 +214,20 @@ export function CampaignEditor({
               </option>
             ))}
           </select>
+        </div>
+
+        <div className="grid gap-1.5">
+          <Label htmlFor="campaign-schedule">Départ programmé</Label>
+          <Input
+            id="campaign-schedule"
+            type="datetime-local"
+            value={draft.scheduledAt}
+            onChange={(event) => set("scheduledAt")(event.target.value)}
+          />
+          <p className="text-xs text-muted-foreground">
+            Facultatif. Une date place la campagne en « Programmée » : le planificateur la lancera à
+            l&apos;heure dite, sans intervention. Laissez vide pour lancer manuellement.
+          </p>
         </div>
 
         <div className="grid gap-1.5 sm:col-span-2">

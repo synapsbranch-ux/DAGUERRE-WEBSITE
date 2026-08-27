@@ -11,9 +11,10 @@ import { actionableQuoteStatuses } from "@/lib/platform/enums";
  * Données transverses de l'espace client.
  *
  * Le profil est créé **paresseusement**, à la première visite plutôt qu'à
- * l'inscription : brancher une écriture Mongoose dans le cycle de vie de
- * Better Auth lierait la création de compte à la disponibilité d'une seconde
- * connexion, et ferait échouer une inscription pour une raison sans rapport.
+ * l'inscription. L'inscription se passe chez Logto : il n'y a plus de moment,
+ * dans notre code, où l'attraper. Un crochet par webhook lierait de toute
+ * façon la création de compte à la disponibilité de notre base, et ferait
+ * échouer une inscription pour une raison sans rapport.
  */
 
 export type ClientProfile = {
@@ -57,9 +58,8 @@ function toProfile(userId: string, doc: ProfileDoc | null): ClientProfile {
  * de toute façon la seconde.
  *
  * `created` distingue la première visite des suivantes : c'est ce qui permet
- * d'envoyer le courriel de bienvenue **une seule fois**, sans ajouter de
- * crochet dans le cycle de vie de Better Auth — un échec d'écriture Mongoose
- * y ferait échouer une inscription pour une raison sans rapport.
+ * d'envoyer le courriel de bienvenue **une seule fois**, sans dépendre d'une
+ * notification de Logto qui pourrait se perdre ou arriver deux fois.
  */
 export async function ensureClientProfile(
   userId: string,

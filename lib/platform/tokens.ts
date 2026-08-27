@@ -29,9 +29,19 @@ type Payload = {
   e: number;
 };
 
+/**
+ * Clé de signature des capacités applicatives.
+ *
+ * Elle n'a **aucun rapport avec l'authentification** : ces jetons ne portent
+ * pas d'identité, seulement une permission d'agir sur un objet précis. La
+ * variable s'appelait autrefois `BETTER_AUTH_SECRET` par simple voisinage ; le
+ * repli la lit encore, car en changer la valeur casserait silencieusement
+ * chaque lien de désabonnement déjà parti — ils sont permanents et vivent dans
+ * des courriels que nous ne pouvons plus rappeler.
+ */
 function secret(): string {
-  const value = process.env.BETTER_AUTH_SECRET;
-  if (!value) throw new Error("BETTER_AUTH_SECRET est requis pour signer les jetons.");
+  const value = process.env.APP_TOKEN_SECRET || process.env.BETTER_AUTH_SECRET;
+  if (!value) throw new Error("APP_TOKEN_SECRET est requis pour signer les jetons.");
   return value;
 }
 

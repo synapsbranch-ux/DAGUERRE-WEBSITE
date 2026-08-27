@@ -31,7 +31,7 @@ export default async function PortalConversationPage({
   if (!conversation) notFound();
 
   const messages = await listMessages(id);
-  if (conversation.unreadForClient > 0) await markConversationRead(id, "client");
+  if (conversation.unreadForClient > 0) await markConversationRead(id, "customer");
 
   const closed = conversation.status !== "open";
 
@@ -70,13 +70,15 @@ export default async function PortalConversationPage({
       <MessageThread
         messages={messages}
         locale={locale}
-        viewerRole="client"
+        viewerRole="customer"
         emptyLabel={t.emptyBody}
       />
 
       <MessageComposer
         endpoint={`/api/client/conversations/${id}/messages`}
+        uploadEndpoint={`/api/client/conversations/${id}/files`}
         label={t.message}
+        attachLabel={t.attach}
         sendLabel={t.send}
         sendingLabel={dict.platform.common.sending}
         errorLabel={dict.platform.common.error}

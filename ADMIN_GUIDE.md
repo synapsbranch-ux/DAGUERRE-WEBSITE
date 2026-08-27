@@ -2,16 +2,36 @@
 
 ## Première connexion
 
-Renseignez `MONGODB_URI`, `BETTER_AUTH_SECRET` et `BETTER_AUTH_URL` dans
-`.env.local` (voir `.env.example`), puis créez le compte :
+Les comptes appartiennent à **Logto**, pas à ce site. Aucun mot de passe n'est
+saisi, stocké ni lisible ici.
+
+Dans la console Logto : créez les rôles `admin` et `customer`, puis attribuez
+`admin` à votre compte. C'est ainsi que se crée le premier administrateur.
+
+Renseignez ensuite `.env.local` (voir `.env.example`), puis :
 
 ```bash
-ADMIN_EMAIL=… ADMIN_PASSWORD=… pnpm bootstrap:admin
-pnpm seed
+pnpm db:indexes    # construit et vérifie les index
+pnpm sync:users    # remplit le miroir des comptes depuis Logto
+pnpm seed          # structure de contenu, sans écraser l'existant
 ```
 
-Ouvrez `/connexion`, puis `/admin`. Seul le rôle MongoDB `admin` est admis ;
-les routes `/api/admin/*` renvoient 401 sans session et 403 pour tout autre rôle.
+Ouvrez `/connexion` — qui vous renvoie vers Logto — puis `/admin`. Seul le rôle
+Logto `admin` est admis ; les routes `/api/admin/*` renvoient 401 sans session
+et 403 pour tout autre rôle.
+
+`GET /api/health` énumère ce qui manque encore dans la configuration, sans
+divulguer aucune valeur.
+
+## Promouvoir ou rétrograder un compte
+
+Fiche du compte dans **Clients**, section « Rôle ». Le changement s'écrit dans
+Logto et **prend effet à la prochaine connexion du compte concerné**, pas
+immédiatement : son jeton actuel porte encore l'ancien rôle.
+
+Vous ne pouvez pas modifier votre propre rôle. Sur une installation qui ne
+compte qu'un administrateur, ce geste fermerait le tableau de bord à tout le
+monde sans moyen de revenir en arrière depuis l'application.
 
 ## Les écrans
 
@@ -174,8 +194,9 @@ pas à dupliquer les données qu'elle concerne.
 
 ## Ce que l'administration ne peut pas faire
 
-- **Lire un mot de passe.** Ils sont hachés par Better Auth et ne sont pas
-  récupérables. Un client le réinitialise lui-même depuis la page de connexion.
+- **Lire un mot de passe.** Ils n'existent pas dans cette base : ils vivent
+  chez Logto, hachés, et ne sont récupérables par personne. Un client
+  réinitialise le sien depuis l'écran de connexion.
 - **Modifier une proposition déjà transmise**, ou en remplacer une acceptée.
-- **Créer un compte administrateur depuis l'interface** : cela passe par
-  `pnpm bootstrap:admin`, hors ligne.
+- **Créer un compte depuis l'interface.** L'inscription se fait chez Logto ; le
+  tableau de bord ne fait qu'attribuer un rôle à un compte existant.

@@ -27,33 +27,34 @@ export function isMember<T extends readonly string[]>(values: T, value: unknown)
 /* ------------------------------------------------------------------ */
 
 /**
- * Rôles applicatifs. `editor` et `staff` ne sont pas encore attribuables
- * depuis une interface, mais les gardes les connaissent déjà : ajouter un
- * membre d'équipe ne demandera pas de revoir chaque contrôle d'accès.
+ * Rôles applicatifs — exactement deux, et ils sont **détenus par Logto**.
+ *
+ * L'application ne les écrit jamais dans sa propre base : elle lit la
+ * revendication `roles` de l'ID token, signée par le fournisseur d'identité.
+ * Le miroir `AppUser` en conserve une copie pour trier et rechercher dans le
+ * tableau de bord, jamais pour décider d'un accès.
  */
-export const roles = ["admin", "editor", "staff", "client"] as const;
+export const roles = ["admin", "customer"] as const;
 export type Role = (typeof roles)[number];
 
-/** Rôles disposant du tableau de bord. */
-export const staffRoles: readonly Role[] = ["admin", "editor", "staff"];
+export const roleLabels: Labels<Role> = {
+  admin: { fr: "Administrateur", en: "Administrator" },
+  customer: { fr: "Client", en: "Customer" },
+};
 
 /**
  * Un compte sans rôle reconnu est un client.
  *
- * Les comptes créés avant l'ouverture de l'espace client portent `user` :
- * les traiter comme clients évite une migration, et surtout évite qu'une
- * valeur inattendue ouvre par défaut le tableau de bord.
+ * Normalisation fermée : une valeur inattendue — rôle Logto renommé, portée
+ * `roles` oubliée dans la configuration, charge utile tronquée — dégrade les
+ * droits au lieu de les élargir. Elle n'ouvre jamais le tableau de bord.
  */
 export function normalizeRole(value: unknown): Role {
-  return isMember(roles, value) ? value : "client";
+  return isMember(roles, value) ? value : "customer";
 }
 
 export function isAdminRole(value: unknown): boolean {
   return normalizeRole(value) === "admin";
-}
-
-export function isStaffRole(value: unknown): boolean {
-  return staffRoles.includes(normalizeRole(value));
 }
 
 /* ------------------------------------------------------------------ */
@@ -101,12 +102,22 @@ export const subscriberSourceLabels: Labels<SubscriberSource> = {
   admin: { fr: "Saisie manuelle", en: "Manual entry" },
 };
 
-export const campaignStatuses = ["draft", "ready", "sending", "sent", "cancelled", "failed"] as const;
+export const campaignStatuses = [
+  "draft",
+  "ready",
+  /** Départ programmé : le planificateur la lancera à `scheduledAt`. */
+  "scheduled",
+  "sending",
+  "sent",
+  "cancelled",
+  "failed",
+] as const;
 export type CampaignStatus = (typeof campaignStatuses)[number];
 
 export const campaignStatusLabels: Labels<CampaignStatus> = {
   draft: { fr: "Brouillon", en: "Draft" },
   ready: { fr: "Prête", en: "Ready" },
+  scheduled: { fr: "Programmée", en: "Scheduled" },
   sending: { fr: "Envoi en cours", en: "Sending" },
   sent: { fr: "Envoyée", en: "Sent" },
   cancelled: { fr: "Annulée", en: "Cancelled" },
@@ -361,14 +372,13 @@ export type Currency = (typeof currencies)[number];
 /* Conversations                                                       */
 /* ------------------------------------------------------------------ */
 
-export const conversationContexts = ["general", "quote", "project", "resource"] as const;
+export const conversationContexts = ["general", "quote", "project"] as const;
 export type ConversationContext = (typeof conversationContexts)[number];
 
 export const conversationContextLabels: Labels<ConversationContext> = {
   general: { fr: "Général", en: "General" },
   quote: { fr: "Devis", en: "Quote" },
   project: { fr: "Projet", en: "Project" },
-  resource: { fr: "Ressource", en: "Resource" },
 };
 
 export const conversationStatuses = ["open", "closed", "archived"] as const;
@@ -443,6 +453,7 @@ export const auditActions = [
   "project_updated",
   "conversation_status_changed",
   "message_sent",
+  "user_role_changed",
 ] as const;
 export type AuditAction = (typeof auditActions)[number];
 
@@ -467,4 +478,5 @@ export const auditActionLabels: Labels<AuditAction> = {
   project_updated: { fr: "Projet modifié", en: "Project updated" },
   conversation_status_changed: { fr: "Conversation modifiée", en: "Conversation updated" },
   message_sent: { fr: "Message envoyé", en: "Message sent" },
+  user_role_changed: { fr: "Rôle modifié", en: "Role changed" },
 };

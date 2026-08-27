@@ -42,7 +42,15 @@ export type TransportName = "resend" | "console" | "none";
 
 const RESEND_ENDPOINT = "https://api.resend.com/emails";
 
-/** Expéditeur transactionnel : confirmations, devis, messages. */
+/**
+ * Expéditeur transactionnel : confirmations, devis, messages.
+ *
+ * Le repli sur l'adresse partagée de Resend rend service en développement, où
+ * aucun domaine n'est vérifié. En production il serait dangereux : cette
+ * adresse ne délivre qu'au titulaire du compte Resend, si bien que les
+ * courriels des clients partiraient sans jamais arriver, et sans erreur. C'est
+ * `isEmailConfigured()` qui referme cette porte, en exigeant `MAIL_FROM`.
+ */
 export function transactionalFrom(): string {
   return process.env.MAIL_FROM?.trim() || "Daguerre <onboarding@resend.dev>";
 }
@@ -69,9 +77,20 @@ export function activeTransport(): TransportName {
   return "none";
 }
 
-/** Le courriel sortant est-il réellement configuré ? Affiché dans le CMS. */
+/**
+ * Le courriel sortant est-il réellement configuré ? Affiché dans le CMS, et
+ * consulté avant de lancer une campagne.
+ *
+ * En production, une clé d'API ne suffit pas : sans `MAIL_FROM`, l'envoi part
+ * de l'adresse partagée de Resend, qui ne délivre qu'au titulaire du compte.
+ * Les courriels seraient acceptés par le fournisseur puis n'arriveraient nulle
+ * part — un échec silencieux, exactement ce que le reste de ce service évite.
+ * Mieux vaut le déclarer non configuré et le signaler.
+ */
 export function isEmailConfigured(): boolean {
-  return activeTransport() === "resend";
+  if (activeTransport() !== "resend") return false;
+  if (process.env.NODE_ENV === "production" && !process.env.MAIL_FROM?.trim()) return false;
+  return true;
 }
 
 const EMAIL_PATTERN = /^[^\s@]+@[^\s@]+\.[^\s@]+$/;

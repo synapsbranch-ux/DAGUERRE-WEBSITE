@@ -39,8 +39,6 @@ export type RouteKey =
   // Plate-forme client — comptes, devis, ressources, infolettre.
   | "login"
   | "register"
-  | "forgotPassword"
-  | "resetPassword"
   | "quote"
   | "quoteClaim"
   | "resources"
@@ -202,20 +200,6 @@ export const routes: Record<RouteKey, RouteDefinition> = {
     label: { fr: "Créer un compte", en: "Create an account" },
     inSitemap: false,
     priority: 0.3,
-    changeFrequency: "yearly",
-  },
-  forgotPassword: {
-    path: { fr: "mot-de-passe-oublie", en: "forgot-password" },
-    label: { fr: "Mot de passe oublié", en: "Forgotten password" },
-    inSitemap: false,
-    priority: 0.1,
-    changeFrequency: "yearly",
-  },
-  resetPassword: {
-    path: { fr: "nouveau-mot-de-passe", en: "reset-password" },
-    label: { fr: "Nouveau mot de passe", en: "New password" },
-    inSitemap: false,
-    priority: 0.1,
     changeFrequency: "yearly",
   },
   quote: {

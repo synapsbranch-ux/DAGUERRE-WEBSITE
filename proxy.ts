@@ -16,9 +16,11 @@ import { toInternalPath, toPublicPath } from "@/lib/routes";
  * 2. **Réécrire les slugs anglais.** `/en/portfolio` est rendu par la route
  *    interne `/en/realisations` sans que l'URL affichée ne change.
  *
- * Le contrôle d'authentification n'est *pas* fait ici : Better Auth documente
- * la vérification par cookie comme non sécurisée. `/admin` est simplement
- * exclu de la logique de locale ; la session est validée dans son layout.
+ * Le contrôle d'authentification n'est *pas* fait ici. Le guide de Next l'écrit
+ * noir sur blanc : le proxy « ne doit pas servir de solution complète de
+ * gestion de session ou d'autorisation », d'autant qu'il tourne aussi sur les
+ * routes préchargées. `/admin` est simplement exclu de la logique de locale ;
+ * la session est validée dans son layout, au plus près des données.
  */
 export function proxy(request: NextRequest) {
   const { pathname } = request.nextUrl;

@@ -24,7 +24,7 @@ type Row = {
   name: string;
   email: string;
   company: string;
-  verified: boolean;
+  suspended: boolean;
   quotes: number;
   createdAt: string;
 };
@@ -32,10 +32,10 @@ type Row = {
 /**
  * Comptes clients.
  *
- * Les comptes appartiennent à Better Auth ; cette page les lit sans jamais
- * toucher aux identifiants. **Aucun mot de passe n'est lisible ni
- * réinitialisable d'ici** : un mot de passe haché n'est pas récupérable, et
- * c'est exactement ce qu'on attend de lui.
+ * Les comptes appartiennent à Logto ; cette page lit leur miroir local sans
+ * jamais toucher aux identifiants. **Aucun mot de passe n'est lisible ni
+ * réinitialisable d'ici** : ils ne sont pas dans cette base, et c'est
+ * exactement ce qu'on attend d'eux.
  */
 export default async function AdminClientsPage({ searchParams }: PageProps<"/admin/clients">) {
   await requireAdmin();
@@ -75,7 +75,7 @@ export default async function AdminClientsPage({ searchParams }: PageProps<"/adm
     name: account.name,
     email: account.email,
     company: companyById.get(account.id) ?? "",
-    verified: account.emailVerified,
+    suspended: account.isSuspended,
     quotes: quoteCounts[index] ?? 0,
     createdAt: formatDate(account.createdAt),
   }));
@@ -93,11 +93,17 @@ export default async function AdminClientsPage({ searchParams }: PageProps<"/adm
     { key: "email", header: "Courriel", cell: (row) => row.email, secondary: true },
     { key: "company", header: "Organisation", cell: (row) => row.company || "—", secondary: true },
     {
-      key: "verified",
-      header: "Adresse",
+      /*
+       * L'état de suspension vient du webhook Logto, donc du fournisseur
+       * lui-même. La vérification d'adresse, elle, n'est pas affichée ici : le
+       * miroir ne la reçoit pas, et un badge qui ne peut pas être faux ne
+       * renseigne personne.
+       */
+      key: "suspended",
+      header: "Statut",
       cell: (row) => (
-        <Badge variant={row.verified ? "default" : "outline"}>
-          {row.verified ? "Vérifiée" : "Non vérifiée"}
+        <Badge variant={row.suspended ? "outline" : "default"}>
+          {row.suspended ? "Suspendu" : "Actif"}
         </Badge>
       ),
     },

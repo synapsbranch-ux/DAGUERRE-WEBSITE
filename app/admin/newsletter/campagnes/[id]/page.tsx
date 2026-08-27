@@ -147,9 +147,22 @@ export default async function CampaignDetailPage({ params }: PageProps<"/admin/n
           content: String(doc.content ?? ""),
           locale: String(doc.locale) === "en" ? "en" : "fr",
           audienceType,
+          scheduledAt: toLocalInput(doc.scheduledAt),
           status,
         }}
       />
     </>
   );
+}
+
+/**
+ * Instant stocké → valeur d'un champ `datetime-local`.
+ *
+ * Le champ n'accepte pas de fuseau et attend l'heure **locale** ; une chaîne
+ * ISO en UTC s'y afficherait décalée de plusieurs heures.
+ */
+function toLocalInput(value: unknown): string {
+  if (!(value instanceof Date) || Number.isNaN(value.getTime())) return "";
+  const offset = value.getTimezoneOffset() * 60_000;
+  return new Date(value.getTime() - offset).toISOString().slice(0, 16);
 }

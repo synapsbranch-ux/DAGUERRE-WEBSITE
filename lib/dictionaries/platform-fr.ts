@@ -42,41 +42,25 @@ export const platformFr = {
   },
 
   auth: {
+    email: "Courriel",
     signInTitle: "Connexion",
     signInLead: "Accédez à votre espace client pour suivre vos demandes et vos projets.",
     signUpTitle: "Créer un compte",
     signUpLead: "Un compte suffit pour suivre vos devis, échanger et accéder aux ressources réservées.",
-    email: "Courriel",
-    password: "Mot de passe",
-    passwordHint: "Au moins 10 caractères.",
-    confirmPassword: "Confirmer le mot de passe",
-    name: "Nom complet",
     signIn: "Se connecter",
     signUp: "Créer mon compte",
     signOut: "Se déconnecter",
-    forgot: "Mot de passe oublié ?",
-    forgotTitle: "Mot de passe oublié",
-    forgotLead: "Indiquez votre adresse : si un compte existe, un lien de réinitialisation vous sera envoyé.",
-    forgotSubmit: "Envoyer le lien",
-    forgotSent:
-      "Si un compte correspond à cette adresse, un courriel vient de partir. Vérifiez aussi vos indésirables.",
-    resetTitle: "Nouveau mot de passe",
-    resetLead: "Choisissez un mot de passe pour votre compte.",
-    resetSubmit: "Enregistrer le mot de passe",
-    resetDone: "Mot de passe modifié. Vous pouvez vous connecter.",
-    resetInvalid: "Ce lien de réinitialisation est expiré ou invalide. Demandez-en un nouveau.",
     noAccount: "Pas encore de compte ?",
     hasAccount: "Vous avez déjà un compte ?",
-    signInFailed: "Connexion impossible. Vérifiez vos identifiants.",
-    signUpFailed: "Inscription impossible. Cette adresse est peut-être déjà utilisée.",
-    passwordMismatch: "Les deux mots de passe ne correspondent pas.",
+    unavailable: "La connexion est momentanément indisponible. Réessayez dans quelques minutes.",
+    forbiddenTitle: "Accès refusé",
     forbidden: "Ce compte n'a pas accès au tableau de bord.",
+    wrongAccount: "Ce n'est pas le bon compte ?",
+    linkInvalid: "Ce lien est expiré ou invalide. Demandez-en un nouveau.",
     marketingOptIn: "Recevoir les analyses et l'infolettre",
     marketingHint: "Facultatif. Vous pourrez vous désabonner à tout moment.",
     unverified:
       "Votre adresse n'est pas encore confirmée. Vérifiez votre boîte de réception pour activer toutes les fonctions.",
-    resendVerification: "Renvoyer le courriel de confirmation",
-    verificationSent: "Courriel de confirmation envoyé.",
   },
 
   portal: {
@@ -100,7 +84,6 @@ export const platformFr = {
     recentDownloads: "Téléchargements récents",
     notifications: "Activité récente",
     viewAll: "Tout voir",
-    accountSince: "Compte ouvert le",
   },
 
   quotes: {
@@ -167,7 +150,6 @@ export const platformFr = {
     conversation: "Échanges",
     accept: "Accepter le devis",
     decline: "Refuser le devis",
-    askQuestion: "Poser une question",
     acceptTitle: "Accepter cette proposition ?",
     acceptBody:
       "L'acceptation vaut accord sur le contenu et le montant de la proposition. Elle est enregistrée et transmise à l'équipe.",
@@ -178,6 +160,8 @@ export const platformFr = {
     acceptedOn: "Acceptée le",
     declinedOn: "Refusée le",
     validUntil: "Valable jusqu'au",
+    print: "Imprimer / PDF",
+    printProposal: "Version imprimable",
     subtotal: "Sous-total",
     discount: "Remise",
     tax: "Taxes",
@@ -198,6 +182,7 @@ export const platformFr = {
     subject: "Objet",
     message: "Message",
     reply: "Répondre",
+    attach: "Pièces jointes (facultatif)",
     send: "Envoyer",
     emptyTitle: "Aucune conversation",
     emptyBody: "Vos échanges avec l'équipe apparaîtront ici.",
@@ -268,7 +253,6 @@ export const platformFr = {
     searchPlaceholder: "Titre, description, catégorie…",
     emptyTitle: "Aucune ressource",
     emptyBody: "Les documents publiés apparaîtront ici.",
-    downloadStarted: "Téléchargement lancé.",
   },
 
   newsletter: {
@@ -289,12 +273,9 @@ export const platformFr = {
     unsubscribeBody: "Vous ne recevrez plus l'infolettre. Les courriels liés à vos devis continuent de vous parvenir.",
     unsubscribeInvalid: "Ce lien de désabonnement est invalide.",
     unsubscribeAlready: "Cette adresse était déjà désabonnée.",
-    resubscribe: "Me réabonner",
   },
 
   status: {
-    actionNeeded: "Action requise",
-    inProgress: "En cours",
     done: "Terminé",
   },
 };

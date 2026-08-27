@@ -31,7 +31,7 @@ import { href } from "@/lib/routes";
 
 type Doc = Record<string, unknown>;
 
-export type QuoteActor = { id: string; email: string; role: "admin" | "client" | "system" };
+export type QuoteActor = { id: string; email: string; role: "admin" | "customer" | "system" };
 
 /** Locale de correspondance d'un dossier. */
 export function quoteLocale(doc: Doc): Locale {
@@ -95,7 +95,7 @@ export async function ensureQuoteConversation(quote: Doc): Promise<string | null
 export async function postQuoteMessage(
   quote: Doc,
   body: string,
-  sender: { id: string; name: string; role: "admin" | "client" },
+  sender: { id: string; name: string; role: "admin" | "customer" },
 ): Promise<string | null> {
   const conversationId = await ensureQuoteConversation(quote);
   if (!conversationId) return null;
@@ -160,7 +160,7 @@ export async function changeQuoteStatus(
     await postQuoteMessage(quote, options.message.trim(), {
       id: actor.id,
       name: options.actorName ?? "",
-      role: actor.role === "client" ? "client" : "admin",
+      role: actor.role === "customer" ? "customer" : "admin",
     });
     await logQuoteActivity(quoteId, "message_sent", actor, {});
   }
