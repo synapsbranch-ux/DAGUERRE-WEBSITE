@@ -20,6 +20,9 @@ import { readSchedule } from "@/lib/platform/schedule";
 import { isHandledEvent, verifyWebhookSignature } from "@/lib/email/webhook";
 import { isEmailConfigured } from "@/lib/email/provider";
 import { createHmac } from "node:crypto";
+import { deflateSync } from "node:zlib";
+
+import { checkSignaturePng } from "@/lib/pdf/png";
 
 /**
  * Contrôles de sécurité.
@@ -449,6 +452,109 @@ describe("configuration du courriel", () => {
     assert.equal(isEmailConfigured(), false);
 
     Object.assign(process.env, saved);
+  });
+});
+
+describe("image de signature", () => {
+  /**
+   * Charge utile réelle qui faisait **boucler indéfiniment** le décodeur PNG de
+   * pdf-lib : en-tête parfaitement valide, flux compressé corrompu. Un
+   * try/catch n'y peut rien, une minuterie non plus — JavaScript est mono-fil.
+   * Comme un tracé vient d'un signataire externe sans compte, l'accepter
+   * suffirait à immobiliser un travailleur serveur.
+   */
+  const HANGS_DECODER =
+    "iVBORw0KGgoAAAANSUhEUgAAAGQAAAAeCAYAAAA2ODtaAAAAWklEQVR4nO3QMQEAIAzAsIF/z0NGDxIFvXtm5gwSAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAOA/HxwAAcXpBrgAAAAASUVORK5CYII=";
+
+  /** Construit un PNG RVBA valide, CRC et flux compressé compris. */
+  function makePng(width: number, height: number): string {
+    const table = Array.from({ length: 256 }, (_, n) => {
+      let c = n;
+      for (let k = 0; k < 8; k += 1) c = c & 1 ? 0xedb88320 ^ (c >>> 1) : c >>> 1;
+      return c >>> 0;
+    });
+    const crc = (buf: Buffer) => {
+      let c = 0xffffffff;
+      for (const byte of buf) c = table[(c ^ byte) & 0xff] ^ (c >>> 8);
+      return (c ^ 0xffffffff) >>> 0;
+    };
+    const chunk = (type: string, data: Buffer) => {
+      const length = Buffer.alloc(4);
+      length.writeUInt32BE(data.length);
+      const body = Buffer.concat([Buffer.from(type, "ascii"), data]);
+      const check = Buffer.alloc(4);
+      check.writeUInt32BE(crc(body));
+      return Buffer.concat([length, body, check]);
+    };
+
+    const ihdr = Buffer.alloc(13);
+    ihdr.writeUInt32BE(width, 0);
+    ihdr.writeUInt32BE(height, 4);
+    ihdr[8] = 8;
+    ihdr[9] = 6;
+
+    const raw = Buffer.concat(
+      Array.from({ length: height }, () =>
+        Buffer.concat([Buffer.from([0]), Buffer.alloc(width * 4, 0x40)]),
+      ),
+    );
+
+    const png = Buffer.concat([
+      Buffer.from([0x89, 0x50, 0x4e, 0x47, 0x0d, 0x0a, 0x1a, 0x0a]),
+      chunk("IHDR", ihdr),
+      chunk("IDAT", deflateSync(raw)),
+      chunk("IEND", Buffer.alloc(0)),
+    ]);
+
+    return png.toString("base64");
+  }
+
+  test("une signature tracée légitime est acceptée", () => {
+    const result = checkSignaturePng(`data:image/png;base64,${makePng(160, 48)}`);
+    assert.equal(result.ok, true);
+    if (result.ok) {
+      assert.equal(result.width, 160);
+      assert.equal(result.height, 48);
+    }
+  });
+
+  test("la charge qui bloque le décodeur est refusée, et vite", () => {
+    const started = Date.now();
+    const result = checkSignaturePng(HANGS_DECODER);
+    assert.equal(result.ok, false, "un en-tête valide ne suffit pas : le flux compressé doit l'être aussi");
+    // Le refus doit être immédiat — c'est tout l'intérêt de ne pas laisser le
+    // décodeur y toucher.
+    assert.ok(Date.now() - started < 1000);
+  });
+
+  test("ce qui n'est pas un PNG est refusé", () => {
+    assert.equal(checkSignaturePng("").ok, false);
+    assert.equal(checkSignaturePng("bonjour").ok, false);
+    assert.equal(checkSignaturePng("!!!pas du base64!!!").ok, false);
+    // JPEG déguisé en PNG.
+    const jpeg = Buffer.concat([Buffer.from([0xff, 0xd8, 0xff, 0xe0]), Buffer.alloc(40)]);
+    assert.equal(checkSignaturePng(jpeg.toString("base64")).ok, false);
+  });
+
+  test("un en-tête aux dimensions aberrantes est refusé", () => {
+    const valid = Buffer.from(makePng(32, 16), "base64");
+
+    const zero = Buffer.from(valid);
+    zero.writeUInt32BE(0, 16);
+    assert.equal(checkSignaturePng(zero.toString("base64")).ok, false);
+
+    const huge = Buffer.from(valid);
+    huge.writeUInt32BE(50_000, 16);
+    assert.equal(checkSignaturePng(huge.toString("base64")).ok, false);
+  });
+
+  test("une taille décompressée qui ne correspond pas à l'en-tête est refusée", () => {
+    // Le flux se décompresse, mais pour d'autres dimensions que celles
+    // annoncées : c'est exactement ce qu'un fichier forgé présente.
+    const valid = Buffer.from(makePng(32, 16), "base64");
+    const lying = Buffer.from(valid);
+    lying.writeUInt32BE(24, 16);
+    assert.equal(checkSignaturePng(lying.toString("base64")).ok, false);
   });
 });
 
