@@ -3,6 +3,8 @@ import { NextResponse } from "next/server";
 import { tryConnectToDatabase } from "@/lib/db/client";
 import { CalendarEventModel } from "@/lib/db/models/platform";
 import { clientIp } from "@/lib/http";
+import { getSiteSettings } from "@/lib/content";
+import { defaultLocale } from "@/lib/i18n";
 import { isCalendarFeedToken } from "@/lib/platform/bookings";
 import { renderCalendar, type CalendarEntry } from "@/lib/platform/ics";
 import { slidingWindow } from "@/lib/rate-limit";
@@ -71,10 +73,21 @@ export async function GET(request: Request) {
    * « abonnement rompu » dans l'application du destinataire, alors qu'il n'y a
    * simplement rien de prévu.
    */
+  const site = await getSiteSettings(defaultLocale);
+  const calendarName = site?.brandName ?? "";
+
   const value =
     entries.length > 0
-      ? renderCalendar(entries, "PUBLISH")
-      : "BEGIN:VCALENDAR\r\nVERSION:2.0\r\nCALSCALE:GREGORIAN\r\nPRODID:daguerre/ics\r\nMETHOD:PUBLISH\r\nX-WR-CALNAME:Daguerre\r\nEND:VCALENDAR";
+      ? renderCalendar(entries, "PUBLISH", calendarName)
+      : [
+          "BEGIN:VCALENDAR",
+          "VERSION:2.0",
+          "CALSCALE:GREGORIAN",
+          "PRODID:daguerre/ics",
+          "METHOD:PUBLISH",
+          `X-WR-CALNAME:${(calendarName || "Agenda").replace(/[\r\n]/g, " ")}`,
+          "END:VCALENDAR",
+        ].join("\r\n");
 
   if (!value) return NextResponse.json({ error: "Agenda indisponible." }, { status: 503 });
 

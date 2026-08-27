@@ -38,8 +38,17 @@ export type CalendarEntry = {
   sequence?: number;
 };
 
-/** Domaine des UID — un UID iCalendar se termine par un domaine, par convention. */
+/**
+ * Domaine des UID.
+ *
+ * Un UID iCalendar se termine par un domaine, par convention. Sa seule
+ * exigence est d'être stable et unique : il n'est jamais affiché, et rien ne le
+ * résout — d'où une constante plutôt qu'un réglage.
+ */
 const UID_DOMAIN = "daguerre";
+
+/** Nom affiché par défaut, si l'appelant n'a pas de nom de marque à passer. */
+const DEFAULT_CALENDAR_NAME = "Agenda";
 
 function toArray(date: Date): DateArray {
   return [
@@ -89,12 +98,18 @@ function toEvent(entry: CalendarEntry, method: "REQUEST" | "CANCEL" | "PUBLISH")
 export function renderCalendar(
   entries: CalendarEntry[],
   method: "REQUEST" | "CANCEL" | "PUBLISH" = "REQUEST",
+  /** Nom affiché par l'agenda du destinataire — le nom de marque, en pratique. */
+  calendarName?: string,
 ): string | null {
   if (entries.length === 0) return null;
 
   const { error, value } = createEvents(
     entries.map((entry) => toEvent(entry, method)),
-    { productId: "daguerre/ics", method, calName: "Daguerre" },
+    {
+      productId: "daguerre/ics",
+      method,
+      calName: calendarName?.trim() || DEFAULT_CALENDAR_NAME,
+    },
   );
 
   if (error || !value) {
@@ -109,8 +124,9 @@ export function renderCalendar(
 export function calendarAttachment(
   entries: CalendarEntry[],
   method: "REQUEST" | "CANCEL" = "REQUEST",
+  calendarName?: string,
 ): { filename: string; content: Buffer; contentType: string }[] | undefined {
-  const value = renderCalendar(entries, method);
+  const value = renderCalendar(entries, method, calendarName);
   if (!value) return undefined;
 
   return [

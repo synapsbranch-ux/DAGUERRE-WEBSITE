@@ -7,6 +7,7 @@ import { sendTransactionalEmail } from "@/lib/email/service";
 import { bookingConfirmedEmail, bookingNoticeEmail } from "@/lib/email/templates";
 import { clientIp, readJson } from "@/lib/http";
 import { defaultLocale, isLocale, type Locale } from "@/lib/i18n";
+import { getSiteSettings } from "@/lib/content";
 import { getBillingSettings } from "@/lib/platform/billing";
 import {
   bookingToken,
@@ -133,6 +134,7 @@ export async function POST(request: Request) {
   }
 
   const settings = await getSchedulingSettings();
+  const site = await getSiteSettings(data.locale);
   const timezone = isKnownTimeZone(data.timezone) ? data.timezone : settings.timezone;
 
   const submissionKey = submissionKeyFrom(null, [
@@ -206,6 +208,7 @@ export async function POST(request: Request) {
       },
     ],
     "REQUEST",
+    site?.brandName ?? "",
   );
 
   await sendTransactionalEmail(

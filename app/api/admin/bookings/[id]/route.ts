@@ -1,6 +1,7 @@
 import { NextResponse } from "next/server";
 
 import { readSession, requireAdminApi } from "@/lib/admin";
+import { getSiteSettings } from "@/lib/content";
 import { connectToDatabase } from "@/lib/db/client";
 import { BookingModel, CalendarEventModel, MeetingTypeModel } from "@/lib/db/models/platform";
 import { absoluteLink } from "@/lib/email/layout";
@@ -90,6 +91,7 @@ export async function POST(request: Request, { params }: Ctx) {
 
   const typeDoc = (await MeetingTypeModel.findById(booking.meetingTypeId).lean()) as Doc | null;
   const typeName = typeDoc ? toMeetingType(typeDoc, locale).name : "";
+  const site = await getSiteSettings(locale);
 
   const outcome = await sendTransactionalEmail(
     String(booking.email ?? ""),
@@ -111,6 +113,7 @@ export async function POST(request: Request, { params }: Ctx) {
         },
       ],
       "CANCEL",
+      site?.brandName ?? "",
     ),
   );
 

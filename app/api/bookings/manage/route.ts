@@ -7,6 +7,7 @@ import { sendTransactionalEmail } from "@/lib/email/service";
 import { bookingCancelledEmail } from "@/lib/email/templates";
 import { clientIp, readJson } from "@/lib/http";
 import { defaultLocale } from "@/lib/i18n";
+import { getSiteSettings } from "@/lib/content";
 import { getBillingSettings } from "@/lib/platform/billing";
 import {
   bookingLocale,
@@ -79,6 +80,7 @@ export async function POST(request: Request) {
 
   const typeDoc = (await MeetingTypeModel.findById(booking.meetingTypeId).lean()) as Doc | null;
   const typeName = typeDoc ? toMeetingType(typeDoc, locale).name : "";
+  const site = await getSiteSettings(locale);
 
   /*
    * L'annulation d'agenda part en pièce jointe avec `method=CANCEL` : c'est ce
@@ -97,6 +99,7 @@ export async function POST(request: Request) {
       },
     ],
     "CANCEL",
+    site?.brandName ?? "",
   );
 
   const bookingUrl = absoluteLink(href("booking", locale));
