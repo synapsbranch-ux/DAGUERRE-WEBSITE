@@ -28,7 +28,7 @@ const organizationId = `${siteUrl}/datakle#organization`;
  * Ils viennent de la collection `SocialLink` : déclarer ici une URL codée en
  * dur ferait mentir Google dès qu'un profil change dans le CMS.
  */
-export function personSchema(sameAs: string[] = []): JsonLdObject {
+export function personSchema(sameAs: string[] = [], email = ""): JsonLdObject {
   return {
     "@context": "https://schema.org",
     "@type": "Person",
@@ -38,7 +38,13 @@ export function personSchema(sameAs: string[] = []): JsonLdObject {
     jobTitle: person.jobTitle,
     description: person.description,
     knowsAbout: person.knowsAbout,
-    email: `mailto:${siteConfig.email}`,
+    /*
+     * L'adresse vient des Paramètres, comme les profils : une valeur codée en
+     * dur finirait publiée dans les données structurées de chaque page. Non
+     * renseignée, la propriété est **omise** — un schéma incomplet vaut mieux
+     * qu'un schéma qui annonce une adresse d'exemple à Google.
+     */
+    ...(email ? { email: `mailto:${email}` } : {}),
     sameAs,
     address: {
       "@type": "PostalAddress",

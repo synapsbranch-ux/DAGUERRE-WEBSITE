@@ -24,7 +24,7 @@ type Row = {
   name: string;
   email: string;
   company: string;
-  verified: boolean;
+  suspended: boolean;
   quotes: number;
   createdAt: string;
 };
@@ -75,7 +75,7 @@ export default async function AdminClientsPage({ searchParams }: PageProps<"/adm
     name: account.name,
     email: account.email,
     company: companyById.get(account.id) ?? "",
-    verified: account.emailVerified,
+    suspended: account.isSuspended,
     quotes: quoteCounts[index] ?? 0,
     createdAt: formatDate(account.createdAt),
   }));
@@ -93,11 +93,17 @@ export default async function AdminClientsPage({ searchParams }: PageProps<"/adm
     { key: "email", header: "Courriel", cell: (row) => row.email, secondary: true },
     { key: "company", header: "Organisation", cell: (row) => row.company || "—", secondary: true },
     {
-      key: "verified",
-      header: "Adresse",
+      /*
+       * L'état de suspension vient du webhook Logto, donc du fournisseur
+       * lui-même. La vérification d'adresse, elle, n'est pas affichée ici : le
+       * miroir ne la reçoit pas, et un badge qui ne peut pas être faux ne
+       * renseigne personne.
+       */
+      key: "suspended",
+      header: "Statut",
       cell: (row) => (
-        <Badge variant={row.verified ? "default" : "outline"}>
-          {row.verified ? "Vérifiée" : "Non vérifiée"}
+        <Badge variant={row.suspended ? "outline" : "default"}>
+          {row.suspended ? "Suspendu" : "Actif"}
         </Badge>
       ),
     },

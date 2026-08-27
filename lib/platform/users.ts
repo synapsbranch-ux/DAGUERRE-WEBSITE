@@ -20,12 +20,24 @@ import { normalizeRole, type Role } from "@/lib/platform/enums";
  * d'administration qui en dépendent n'ont pas eu à être touchés.
  */
 
+/**
+ * Ce que le miroir sait réellement d'un compte.
+ *
+ * L'état de vérification d'adresse **n'y figure pas**, délibérément : il
+ * appartient au parcours Logto et le miroir ne le reçoit pas. Le porter ici
+ * obligerait à inventer une valeur, et une valeur inventée finit toujours par
+ * être affichée comme un fait. Le titulaire du compte voit le sien dans son
+ * espace client, où il vient de la revendication signée du jeton.
+ *
+ * `isSuspended`, lui, est vrai : le webhook `User.SuspensionStatus.Updated` le
+ * maintient.
+ */
 export type AccountSummary = {
   id: string;
   name: string;
   email: string;
   role: Role;
-  emailVerified: boolean;
+  isSuspended: boolean;
   createdAt: string;
 };
 
@@ -34,6 +46,7 @@ type MirrorDoc = {
   name?: unknown;
   email?: unknown;
   role?: unknown;
+  isSuspended?: unknown;
   createdAt?: unknown;
 };
 
@@ -43,12 +56,7 @@ function toSummary(doc: MirrorDoc): AccountSummary {
     name: String(doc.name ?? ""),
     email: String(doc.email ?? ""),
     role: normalizeRole(doc.role),
-    /*
-     * La vérification d'adresse appartient au parcours Logto. Le miroir ne la
-     * suit pas : l'afficher ici donnerait une valeur périmée dès la vérification
-     * suivante. Seule la session en porte l'état à jour.
-     */
-    emailVerified: true,
+    isSuspended: doc.isSuspended === true,
     createdAt: doc.createdAt instanceof Date ? doc.createdAt.toISOString() : "",
   };
 }
@@ -59,7 +67,10 @@ function fromLogto(user: LogtoUser, role: Role): AccountSummary {
     name: user.name || user.username || user.primaryEmail || "",
     email: user.primaryEmail ?? "",
     role,
-    emailVerified: true,
+    isSuspended: user.isSuspended,
+    // Le compte vient d'être résolu chez Logto, hors du miroir : sa date de
+    // création n'est pas dans la réponse. `formatDate` rendra « — », pas une
+    // date inventée.
     createdAt: "",
   };
 }

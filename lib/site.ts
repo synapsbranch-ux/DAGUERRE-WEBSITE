@@ -10,18 +10,37 @@
  * toutes les URLs canoniques, Open Graph, le sitemap et le robots.txt en
  * dépendent. Sans cette variable, on retombe sur l'URL par défaut ci-dessous.
  */
+/** Repli de dernier recours — voir `isPlaceholderSiteUrl()`. */
+const PLACEHOLDER_SITE_URL = "https://daguerre.example.com";
+
 function resolveSiteUrl(): string {
   const raw =
     process.env.NEXT_PUBLIC_SITE_URL ??
     (process.env.VERCEL_PROJECT_PRODUCTION_URL
       ? `https://${process.env.VERCEL_PROJECT_PRODUCTION_URL}`
-      : "https://daguerre.example.com");
+      : PLACEHOLDER_SITE_URL);
 
   // Pas de barre oblique finale : les chemins sont toujours concaténés ensuite.
   return raw.replace(/\/+$/, "");
 }
 
 export const siteUrl = resolveSiteUrl();
+
+/**
+ * Le site tourne-t-il encore sur l'URL de repli ?
+ *
+ * Le repli existe pour que `next build` passe sans secrets — la compilation n'a
+ * aucun besoin de connaître le domaine. Mais s'il survit jusqu'en production,
+ * les URL canoniques, l'Open Graph, le sitemap et les liens des courriels
+ * désignent tous un domaine qui n'existe pas, sans que rien ne plante.
+ *
+ * `NEXT_PUBLIC_SITE_URL` est figée à la compilation : une vérification
+ * d'exécution sur `process.env` ne verrait rien. C'est la constante déjà
+ * résolue qu'il faut interroger, et c'est ce que fait `/api/health`.
+ */
+export function isPlaceholderSiteUrl(): boolean {
+  return siteUrl === PLACEHOLDER_SITE_URL;
+}
 
 export const siteConfig = {
   name: "Daguerre",
@@ -32,8 +51,6 @@ export const siteConfig = {
   url: siteUrl,
   locale: "fr_CA",
   lang: "fr",
-  email: "contact@example.com",
-  phone: "+1 000 000 0000",
   /** Baseline affichée à côté de la marque, dans l'en-tête. */
   baseline: {
     fr: "Données & décision",

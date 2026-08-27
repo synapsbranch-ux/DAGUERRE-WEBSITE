@@ -8,7 +8,7 @@ import { Header } from "@/components/layout/Header";
 import { LiquefyRoot } from "@/components/liquefy/LiquefyRoot";
 import { JsonLd } from "@/components/seo/JsonLd";
 import { getDictionaryFor } from "@/lib/dictionaries";
-import { getSocialLinks } from "@/lib/content";
+import { getSiteSettings, getSocialLinks } from "@/lib/content";
 import { getPopulatedRoutes } from "@/lib/navigation";
 import { fontVariables } from "@/lib/fonts";
 import { isLocale, locales, ogLocales } from "@/lib/i18n";
@@ -111,16 +111,22 @@ export default async function RootLayout({ children, params }: LayoutProps<"/[lo
   const { locale } = await params;
   if (!isLocale(locale)) notFound();
 
-  const [dict, socialLinks, populated] = await Promise.all([
+  const [dict, socialLinks, populated, settings] = await Promise.all([
     getDictionaryFor(locale),
     getSocialLinks(),
     getPopulatedRoutes(locale),
+    getSiteSettings(),
   ]);
 
   return (
     <html lang={locale} className={`${fontVariables} h-full`}>
       <body className="min-h-full flex flex-col">
-        <JsonLd data={[personSchema(socialLinks.map((link) => link.url)), websiteSchema()]} />
+        <JsonLd
+          data={[
+            personSchema(socialLinks.map((link) => link.url), settings?.email ?? ""),
+            websiteSchema(),
+          ]}
+        />
         <a
           href="#contenu"
           className="sr-only focus:not-sr-only focus:absolute focus:left-4 focus:top-4 focus:z-50 focus:rounded-md focus:bg-foreground focus:px-4 focus:py-2 focus:text-sm focus:text-background"

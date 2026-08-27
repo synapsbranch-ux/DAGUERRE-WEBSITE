@@ -5,6 +5,7 @@ import { isManagementConfigured } from "@/lib/auth/management";
 import { tryConnectToDatabase } from "@/lib/db/client";
 import { isEmailConfigured } from "@/lib/email/provider";
 import { isSharedRateLimitConfigured } from "@/lib/rate-limit";
+import { isPlaceholderSiteUrl } from "@/lib/site";
 
 export const runtime = "nodejs";
 export const dynamic = "force-dynamic";
@@ -31,6 +32,8 @@ export async function GET() {
 
   const checks = {
     database,
+    // Figée à la compilation : seule la constante résolue peut la trahir.
+    canonicalUrl: !isPlaceholderSiteUrl(),
     auth: isLogtoConfigured(),
     authManagement: isManagementConfigured(),
     email: isEmailConfigured(),

@@ -18,6 +18,7 @@ import { isHandledLogtoEvent, verifyLogtoSignature } from "@/lib/auth/webhook";
 import { hasCronSecret } from "@/lib/platform/cron";
 import { readSchedule } from "@/lib/platform/schedule";
 import { isHandledEvent, verifyWebhookSignature } from "@/lib/email/webhook";
+import { isEmailConfigured } from "@/lib/email/provider";
 import { createHmac } from "node:crypto";
 
 /**
@@ -416,6 +417,40 @@ describe("signature des notifications Logto", () => {
   });
 });
 
+
+describe("configuration du courriel", () => {
+  const saved = { ...process.env };
+
+  function reset(env: Record<string, string | undefined>) {
+    for (const key of ["RESEND_API_KEY", "MAIL_FROM", "NODE_ENV"]) delete process.env[key];
+    Object.assign(process.env, env);
+  }
+
+  test("en production, une clé sans expéditeur ne compte pas comme configuré", () => {
+    // Sans MAIL_FROM, l'envoi part de l'adresse partagée de Resend, qui ne
+    // délivre qu'au titulaire du compte : les clients ne recevraient rien, et
+    // sans la moindre erreur.
+    reset({ NODE_ENV: "production", RESEND_API_KEY: "re_test" });
+    assert.equal(isEmailConfigured(), false);
+  });
+
+  test("en production, clé et expéditeur suffisent", () => {
+    reset({ NODE_ENV: "production", RESEND_API_KEY: "re_test", MAIL_FROM: "Daguerre <a@b.co>" });
+    assert.equal(isEmailConfigured(), true);
+  });
+
+  test("hors production, le repli d'expéditeur reste acceptable", () => {
+    reset({ NODE_ENV: "development", RESEND_API_KEY: "re_test" });
+    assert.equal(isEmailConfigured(), true);
+  });
+
+  test("sans clé, rien n'est configuré, même avec un expéditeur", () => {
+    reset({ NODE_ENV: "production", MAIL_FROM: "Daguerre <a@b.co>" });
+    assert.equal(isEmailConfigured(), false);
+
+    Object.assign(process.env, saved);
+  });
+});
 
 describe("secret des tâches planifiées", () => {
   const SECRET = "secret-de-planificateur-suffisamment-long";
