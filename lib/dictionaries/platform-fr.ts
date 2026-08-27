@@ -83,7 +83,6 @@ export const platformFr = {
     recentDownloads: "Téléchargements récents",
     notifications: "Activité récente",
     viewAll: "Tout voir",
-    accountSince: "Compte ouvert le",
   },
 
   quotes: {
@@ -150,7 +149,6 @@ export const platformFr = {
     conversation: "Échanges",
     accept: "Accepter le devis",
     decline: "Refuser le devis",
-    askQuestion: "Poser une question",
     acceptTitle: "Accepter cette proposition ?",
     acceptBody:
       "L'acceptation vaut accord sur le contenu et le montant de la proposition. Elle est enregistrée et transmise à l'équipe.",
@@ -161,6 +159,8 @@ export const platformFr = {
     acceptedOn: "Acceptée le",
     declinedOn: "Refusée le",
     validUntil: "Valable jusqu'au",
+    print: "Imprimer / PDF",
+    printProposal: "Version imprimable",
     subtotal: "Sous-total",
     discount: "Remise",
     tax: "Taxes",
@@ -181,6 +181,7 @@ export const platformFr = {
     subject: "Objet",
     message: "Message",
     reply: "Répondre",
+    attach: "Pièces jointes (facultatif)",
     send: "Envoyer",
     emptyTitle: "Aucune conversation",
     emptyBody: "Vos échanges avec l'équipe apparaîtront ici.",
@@ -251,7 +252,6 @@ export const platformFr = {
     searchPlaceholder: "Titre, description, catégorie…",
     emptyTitle: "Aucune ressource",
     emptyBody: "Les documents publiés apparaîtront ici.",
-    downloadStarted: "Téléchargement lancé.",
   },
 
   newsletter: {
@@ -272,12 +272,9 @@ export const platformFr = {
     unsubscribeBody: "Vous ne recevrez plus l'infolettre. Les courriels liés à vos devis continuent de vous parvenir.",
     unsubscribeInvalid: "Ce lien de désabonnement est invalide.",
     unsubscribeAlready: "Cette adresse était déjà désabonnée.",
-    resubscribe: "Me réabonner",
   },
 
   status: {
-    actionNeeded: "Action requise",
-    inProgress: "En cours",
     done: "Terminé",
   },
 };

@@ -102,12 +102,22 @@ export const subscriberSourceLabels: Labels<SubscriberSource> = {
   admin: { fr: "Saisie manuelle", en: "Manual entry" },
 };
 
-export const campaignStatuses = ["draft", "ready", "sending", "sent", "cancelled", "failed"] as const;
+export const campaignStatuses = [
+  "draft",
+  "ready",
+  /** Départ programmé : le planificateur la lancera à `scheduledAt`. */
+  "scheduled",
+  "sending",
+  "sent",
+  "cancelled",
+  "failed",
+] as const;
 export type CampaignStatus = (typeof campaignStatuses)[number];
 
 export const campaignStatusLabels: Labels<CampaignStatus> = {
   draft: { fr: "Brouillon", en: "Draft" },
   ready: { fr: "Prête", en: "Ready" },
+  scheduled: { fr: "Programmée", en: "Scheduled" },
   sending: { fr: "Envoi en cours", en: "Sending" },
   sent: { fr: "Envoyée", en: "Sent" },
   cancelled: { fr: "Annulée", en: "Cancelled" },
@@ -362,14 +372,13 @@ export type Currency = (typeof currencies)[number];
 /* Conversations                                                       */
 /* ------------------------------------------------------------------ */
 
-export const conversationContexts = ["general", "quote", "project", "resource"] as const;
+export const conversationContexts = ["general", "quote", "project"] as const;
 export type ConversationContext = (typeof conversationContexts)[number];
 
 export const conversationContextLabels: Labels<ConversationContext> = {
   general: { fr: "Général", en: "General" },
   quote: { fr: "Devis", en: "Quote" },
   project: { fr: "Projet", en: "Project" },
-  resource: { fr: "Ressource", en: "Resource" },
 };
 
 export const conversationStatuses = ["open", "closed", "archived"] as const;
@@ -444,6 +453,7 @@ export const auditActions = [
   "project_updated",
   "conversation_status_changed",
   "message_sent",
+  "user_role_changed",
 ] as const;
 export type AuditAction = (typeof auditActions)[number];
 
@@ -468,4 +478,5 @@ export const auditActionLabels: Labels<AuditAction> = {
   project_updated: { fr: "Projet modifié", en: "Project updated" },
   conversation_status_changed: { fr: "Conversation modifiée", en: "Conversation updated" },
   message_sent: { fr: "Message envoyé", en: "Message sent" },
+  user_role_changed: { fr: "Rôle modifié", en: "Role changed" },
 };

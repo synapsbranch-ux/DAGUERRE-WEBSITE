@@ -84,7 +84,6 @@ export const platformEn = {
     recentDownloads: "Recent downloads",
     notifications: "Recent activity",
     viewAll: "View all",
-    accountSince: "Account opened on",
   },
 
   quotes: {
@@ -150,7 +149,6 @@ export const platformEn = {
     conversation: "Exchanges",
     accept: "Accept the quote",
     decline: "Decline the quote",
-    askQuestion: "Ask a question",
     acceptTitle: "Accept this proposal?",
     acceptBody:
       "Accepting means agreeing to the content and the amount of the proposal. It is recorded and sent to the team.",
@@ -161,6 +159,8 @@ export const platformEn = {
     acceptedOn: "Accepted on",
     declinedOn: "Declined on",
     validUntil: "Valid until",
+    print: "Print / PDF",
+    printProposal: "Printable version",
     subtotal: "Subtotal",
     discount: "Discount",
     tax: "Tax",
@@ -181,6 +181,7 @@ export const platformEn = {
     subject: "Subject",
     message: "Message",
     reply: "Reply",
+    attach: "Attachments (optional)",
     send: "Send",
     emptyTitle: "No conversation",
     emptyBody: "Your exchanges with the team will appear here.",
@@ -251,7 +252,6 @@ export const platformEn = {
     searchPlaceholder: "Title, description, category…",
     emptyTitle: "No resource",
     emptyBody: "Published documents will appear here.",
-    downloadStarted: "Download started.",
   },
 
   newsletter: {
@@ -273,12 +273,9 @@ export const platformEn = {
       "You will no longer receive the newsletter. Emails about your quotes keep reaching you.",
     unsubscribeInvalid: "This unsubscribe link is invalid.",
     unsubscribeAlready: "This address was already unsubscribed.",
-    resubscribe: "Subscribe again",
   },
 
   status: {
-    actionNeeded: "Action needed",
-    inProgress: "In progress",
     done: "Done",
   },
 } satisfies typeof platformFr;

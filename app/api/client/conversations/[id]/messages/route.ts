@@ -6,6 +6,7 @@ import { adminNotificationAddress, adminUrl, sendTransactionalEmail } from "@/li
 import { newMessageEmail } from "@/lib/email/templates";
 import { readJson, validObjectId } from "@/lib/http";
 import { isDenied, notFoundResponse, requireSessionApi } from "@/lib/platform/access";
+import { claimAttachments } from "@/lib/platform/attachments";
 import { appendMessage, markConversationRead } from "@/lib/platform/messaging";
 import { logQuoteActivity } from "@/lib/platform/quotes";
 import { clientIp } from "@/lib/http";
@@ -53,7 +54,19 @@ export async function POST(request: Request, { params }: Ctx) {
 
   if (!conversation) return notFoundResponse();
 
-  await appendMessage(id, { id: user.id, name: user.name || user.email, role: "customer" }, parsed.data.body);
+  // Chaque identifiant reçu est revérifié : seuls les fichiers déposés par cet
+  // expéditeur pour cette conversation sont rattachés.
+  const attachments = await claimAttachments(parsed.data.attachmentFileIds, {
+    conversationId: id,
+    uploadedBy: user.id,
+  });
+
+  await appendMessage(
+    id,
+    { id: user.id, name: user.name || user.email, role: "customer" },
+    parsed.data.body,
+    attachments,
+  );
   await markConversationRead(id, "customer");
 
   const quoteId = conversation.quoteId ? String(conversation.quoteId) : "";

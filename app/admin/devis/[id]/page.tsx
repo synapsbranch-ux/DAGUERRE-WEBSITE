@@ -188,7 +188,9 @@ export default async function AdminQuoteDetailPage({ params }: PageProps<"/admin
             {conversationId ? (
               <MessageComposer
                 endpoint={`/api/admin/conversations/${conversationId}/messages`}
+                uploadEndpoint={`/api/admin/conversations/${conversationId}/files`}
                 label="Répondre au client"
+                attachLabel="Pièces jointes (facultatif)"
                 sendLabel="Envoyer"
                 sendingLabel="Envoi…"
                 errorLabel="Le message n'a pas pu être envoyé."

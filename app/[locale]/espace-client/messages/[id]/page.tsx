@@ -76,7 +76,9 @@ export default async function PortalConversationPage({
 
       <MessageComposer
         endpoint={`/api/client/conversations/${id}/messages`}
+        uploadEndpoint={`/api/client/conversations/${id}/files`}
         label={t.message}
+        attachLabel={t.attach}
         sendLabel={t.send}
         sendingLabel={dict.platform.common.sending}
         errorLabel={dict.platform.common.error}

@@ -2,6 +2,7 @@ import Link from "next/link";
 import { notFound } from "next/navigation";
 
 import { AdminDatabaseError, AdminPageHeader } from "@/components/admin/AdminTable";
+import { RoleControl } from "@/components/admin/RoleControl";
 import { Badge } from "@/components/ui/badge";
 import { Button } from "@/components/ui/button";
 import { Tabs, TabsContent, TabsList, TabsTrigger } from "@/components/ui/tabs";
@@ -21,6 +22,7 @@ import {
   clientProjectStatusLabels,
   conversationStatusLabels,
   quoteStatusLabels,
+  roleLabels,
 } from "@/lib/platform/enums";
 import { findAccount } from "@/lib/platform/users";
 import { formatDate } from "@/lib/utils";
@@ -34,7 +36,7 @@ import { formatDate } from "@/lib/utils";
  * rendu.
  */
 export default async function AdminClientPage({ params }: PageProps<"/admin/clients/[id]">) {
-  await requireAdmin();
+  const session = await requireAdmin();
 
   const { id } = await params;
   const connected = await tryConnectToDatabase();
@@ -76,8 +78,8 @@ export default async function AdminClientPage({ params }: PageProps<"/admin/clie
         description={account.email}
         actions={
           <>
-            <Badge variant={account.emailVerified ? "default" : "outline"}>
-              {account.emailVerified ? "Adresse vérifiée" : "Adresse non vérifiée"}
+            <Badge variant={account.role === "admin" ? "default" : "outline"}>
+              {roleLabels[account.role].fr}
             </Badge>
             <Button asChild variant="secondary">
               <Link href="/admin/clients">Retour à la liste</Link>
@@ -112,13 +114,21 @@ export default async function AdminClientPage({ params }: PageProps<"/admin/clie
               value={profile?.preferredLanguage === "en" ? "Anglais" : "Français"}
             />
             <Entry label="Compte ouvert le" value={formatDate(account.createdAt)} />
-            <Entry label="Rôle" value={account.role} />
+            <Entry label="Rôle" value={roleLabels[account.role].fr} />
           </dl>
           <p className="mt-6 max-w-[70ch] text-sm text-muted-foreground">
-            Le mot de passe de ce compte est stocké haché par Better Auth. Il n&apos;est ni consultable
-            ni récupérable depuis le tableau de bord ; le client le réinitialise lui-même depuis la page
-            de connexion.
+            Les identifiants de ce compte appartiennent à Logto et ne transitent jamais par ce site.
+            Aucun mot de passe n&apos;est consultable ni récupérable depuis le tableau de bord ; le
+            client le réinitialise lui-même depuis l&apos;écran de connexion.
           </p>
+
+          <div className="mt-8 max-w-3xl">
+            <RoleControl
+              userId={account.id}
+              role={account.role}
+              isSelf={session.user.id === account.id}
+            />
+          </div>
         </TabsContent>
 
         <TabsContent value="quotes" className="pt-6">

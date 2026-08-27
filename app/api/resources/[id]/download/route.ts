@@ -4,6 +4,7 @@ import { tryConnectToDatabase } from "@/lib/db/client";
 import {
   ContentDownloadModel,
   ContentResourceModel,
+  NewsletterSubscriberModel,
   StoredFileModel,
 } from "@/lib/db/models/platform";
 import { clientIp, validObjectId } from "@/lib/http";
@@ -87,7 +88,10 @@ export async function GET(request: Request, { params }: { params: Promise<{ id: 
     return NextResponse.json({ error: "Introuvable" }, { status: 404 });
   }
 
-  await recordDownload(id, session?.user.id ?? "");
+  await recordDownload(id, {
+    userId: session?.user.id ?? "",
+    email: session?.user.email ?? "",
+  });
 
   // Ressource hébergée ailleurs : on redirige, il n'y a pas de binaire ici.
   if (!resource.fileId && resource.externalUrl) {
@@ -106,14 +110,46 @@ export async function GET(request: Request, { params }: { params: Promise<{ id: 
   });
 }
 
-/** Comptage « au mieux » : un échec d'écriture ne prive personne du fichier. */
-async function recordDownload(resourceId: string, userId: string): Promise<void> {
+/**
+ * Comptage « au mieux » : un échec d'écriture ne prive personne du fichier.
+ *
+ * L'abonné à l'infolettre est rattaché quand il peut l'être — par le compte,
+ * sinon par l'adresse. C'est ce qui permet de répondre à « quelles ressources
+ * intéressent les abonnés de telle campagne ? », question pour laquelle le
+ * champ existait sans jamais avoir été rempli.
+ */
+async function recordDownload(
+  resourceId: string,
+  viewer: { userId: string; email: string },
+): Promise<void> {
   try {
+    const subscriberId = await resolveSubscriber(viewer);
+
     await Promise.all([
-      ContentDownloadModel.create({ resourceId, userId, downloadedAt: new Date() }),
+      ContentDownloadModel.create({
+        resourceId,
+        userId: viewer.userId,
+        subscriberId,
+        downloadedAt: new Date(),
+      }),
       ContentResourceModel.updateOne({ _id: resourceId }, { $inc: { downloadCount: 1 } }),
     ]);
   } catch (error) {
     console.error("[ressources] comptage du téléchargement impossible :", error);
   }
+}
+
+/** Abonné correspondant au visiteur, s'il en existe un. */
+async function resolveSubscriber(viewer: { userId: string; email: string }): Promise<unknown> {
+  if (!viewer.userId && !viewer.email) return null;
+
+  const or: Record<string, unknown>[] = [];
+  if (viewer.userId) or.push({ userId: viewer.userId });
+  if (viewer.email) or.push({ email: viewer.email.toLowerCase() });
+
+  const subscriber = (await NewsletterSubscriberModel.findOne({ $or: or })
+    .select("_id")
+    .lean()) as { _id?: unknown } | null;
+
+  return subscriber?._id ?? null;
 }

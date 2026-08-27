@@ -272,6 +272,13 @@ export const conversationCreateSchema = z.object({
 
 export const messageInputSchema = z.object({
   body: text(8000).min(1, "Le message est vide."),
+  /*
+   * Identifiants de fichiers **déjà déposés**. Le serveur revérifie chacun :
+   * un identifiant reçu ici ne rattache un fichier que s'il appartient bien à
+   * l'expéditeur et à cette conversation. Le plafond évite qu'un message
+   * traîne cent fichiers derrière lui.
+   */
+  attachmentFileIds: z.array(objectId).max(10).optional().default([]),
 });
 
 export const conversationStatusSchema = z.object({
@@ -327,6 +334,7 @@ export const fileMetadataSchema = z.object({
   ownerUserId: optionalObjectId,
   quoteRequestId: optionalObjectId,
   projectId: optionalObjectId,
+  conversationId: optionalObjectId,
   label: text(200).optional().default(""),
 });
 

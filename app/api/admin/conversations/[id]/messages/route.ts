@@ -5,6 +5,7 @@ import { connectToDatabase } from "@/lib/db/client";
 import { ConversationModel } from "@/lib/db/models/platform";
 import { readJson, validObjectId } from "@/lib/http";
 import { recordAudit } from "@/lib/platform/audit";
+import { claimAttachments } from "@/lib/platform/attachments";
 import { appendMessage, markConversationRead, notifyClientOfMessage } from "@/lib/platform/messaging";
 import { logQuoteActivity } from "@/lib/platform/quotes";
 import { messageInputSchema } from "@/lib/validation-platform";
@@ -39,7 +40,17 @@ export async function POST(request: Request, { params }: Ctx) {
   const session = await readSession();
   const name = session?.user.name || "Daguerre";
 
-  await appendMessage(id, { id: session?.user.id ?? "", name, role: "admin" }, parsed.data.body);
+  const attachments = await claimAttachments(parsed.data.attachmentFileIds, {
+    conversationId: id,
+    uploadedBy: session?.user.id ?? "",
+  });
+
+  await appendMessage(
+    id,
+    { id: session?.user.id ?? "", name, role: "admin" },
+    parsed.data.body,
+    attachments,
+  );
   await markConversationRead(id, "admin");
   await notifyClientOfMessage(conversation, name);
 

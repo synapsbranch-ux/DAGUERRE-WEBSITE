@@ -43,6 +43,7 @@ export async function POST(request: Request) {
     ownerUserId: String(form?.get("ownerUserId") ?? ""),
     quoteRequestId: String(form?.get("quoteRequestId") ?? ""),
     projectId: String(form?.get("projectId") ?? ""),
+    conversationId: String(form?.get("conversationId") ?? ""),
     label: String(form?.get("label") ?? ""),
   });
   if (!metadata.success) return NextResponse.json({ error: "Métadonnées invalides." }, { status: 400 });
@@ -69,6 +70,7 @@ export async function POST(request: Request) {
       ownerUserId: metadata.data.ownerUserId,
       quoteRequestId: metadata.data.quoteRequestId || null,
       projectId: metadata.data.projectId || null,
+      conversationId: metadata.data.conversationId || null,
       label: metadata.data.label,
       uploadedBy: session?.user.id ?? "",
     });

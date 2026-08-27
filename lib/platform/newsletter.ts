@@ -11,6 +11,8 @@ import {
 } from "@/lib/db/models/platform";
 import { defaultLocale, isLocale, type Locale } from "@/lib/i18n";
 import {
+  campaignAudiences,
+  isMember,
   mailableSubscriberStatuses,
   type CampaignAudience,
   type SubscriberSource,
@@ -390,6 +392,67 @@ export async function dispatchCampaign(campaignId: string, maxBatches = 50): Pro
     if (result.processed === 0) break;
   }
   await finalizeCampaign(campaignId);
+}
+
+/**
+ * Réservation d'une campagne et constitution de sa liste de destinataires.
+ *
+ * Extrait de la route d'administration pour que le planificateur puisse lancer
+ * une campagne programmée par le même chemin. Deux départs par deux voies
+ * différentes qui ne partageraient pas ce code finiraient par diverger — et
+ * c'est exactement là qu'une campagne part deux fois.
+ *
+ * ## Idempotence
+ *
+ * Le passage à `sending` est une mise à jour **conditionnelle** sur le statut
+ * courant : seul le premier appelant l'obtient. Un double-clic, une reprise
+ * réseau ou deux exécutions concurrentes du planificateur trouvent la campagne
+ * déjà en cours et repartent les mains vides. L'index unique
+ * `(campaignId, subscriberId)` reste le dernier filet.
+ */
+export type LaunchOutcome =
+  | { ok: true; audience: CampaignAudience; recipientCount: number }
+  | { ok: false; reason: "not_found" | "already_running"; status?: string }
+  | { ok: false; reason: "snapshot_failed" };
+
+export async function launchCampaign(
+  campaignId: string,
+  from: readonly string[] = ["draft", "ready", "failed"],
+): Promise<LaunchOutcome> {
+  const campaign = (await NewsletterCampaignModel.findOneAndUpdate(
+    { _id: campaignId, status: { $in: [...from] } },
+    { $set: { status: "sending", lastError: "" } },
+    { new: true },
+  ).lean()) as Record<string, unknown> | null;
+
+  if (!campaign) {
+    const current = (await NewsletterCampaignModel.findById(campaignId)
+      .select("status")
+      .lean()) as { status?: string } | null;
+    if (!current) return { ok: false, reason: "not_found" };
+    return { ok: false, reason: "already_running", status: String(current.status ?? "") };
+  }
+
+  const audienceValue = String(campaign.audienceType ?? "all_active");
+  const audience: CampaignAudience = isMember(campaignAudiences, audienceValue)
+    ? audienceValue
+    : "all_active";
+
+  let recipientCount = 0;
+  try {
+    recipientCount = await snapshotRecipients(campaignId, audience);
+  } catch (error) {
+    await NewsletterCampaignModel.updateOne(
+      { _id: campaignId },
+      { $set: { status: "failed", lastError: "Constitution de la liste impossible." } },
+    );
+    console.error("[newsletter] snapshot impossible :", error);
+    return { ok: false, reason: "snapshot_failed" };
+  }
+
+  await NewsletterCampaignModel.updateOne({ _id: campaignId }, { $set: { recipientCount } });
+
+  return { ok: true, audience, recipientCount };
 }
 
 /** Marque la campagne terminée quand plus aucun destinataire n'est en file. */
