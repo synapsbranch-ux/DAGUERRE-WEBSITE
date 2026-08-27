@@ -41,6 +41,7 @@ export const adminSections: AdminSection[] = [
   { path: "devis", label: "Devis", group: "Clients", kind: "custom" },
   { path: "projets-clients", label: "Projets", group: "Clients", kind: "custom" },
   { path: "factures", label: "Factures", group: "Clients", kind: "custom" },
+  { path: "contrats", label: "Contrats", group: "Clients", kind: "custom" },
   { path: "conversations", label: "Conversations", group: "Clients", kind: "custom" },
 
   { path: "newsletter/abonnes", label: "Abonnés", group: "Marketing", kind: "custom" },

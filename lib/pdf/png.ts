@@ -30,8 +30,15 @@ import { inflateSync } from "node:zlib";
 /** Les huit octets qui ouvrent tout fichier PNG. */
 const MAGIC = Buffer.from([0x89, 0x50, 0x4e, 0x47, 0x0d, 0x0a, 0x1a, 0x0a]);
 
-/** Une signature manuscrite tient largement dans ces bornes. */
-const MAX_BYTES = 512 * 1024;
+/**
+ * Une signature manuscrite tient largement dans ces bornes.
+ *
+ * Le plafond est **volontairement sous celui du corps JSON** (`MAX_JSON_BYTES`,
+ * 256 Kio) : encodé en base64, un PNG grossit d'un tiers, et un tracé accepté
+ * ici doit pouvoir arriver jusqu'ici. Un plafond plus haut produirait un 413
+ * avant toute validation — un refus incompréhensible pour le signataire.
+ */
+const MAX_BYTES = 128 * 1024;
 const MAX_WIDTH = 4_000;
 const MAX_HEIGHT = 2_000;
 

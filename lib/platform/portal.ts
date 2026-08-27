@@ -93,6 +93,8 @@ export function portalNav(locale: Locale, dict: Dictionary, counts: PortalCounts
       count: counts.unreadMessages,
     },
     { key: "projects", label: nav.projects, href: href("portalProjects", locale) },
+    { key: "invoices", label: nav.invoices, href: href("portalInvoices", locale) },
+    { key: "contracts", label: nav.contracts, href: href("portalContracts", locale) },
     { key: "resources", label: nav.resources, href: href("portalResources", locale) },
     { key: "articles", label: nav.articles, href: href("portalArticles", locale) },
     {

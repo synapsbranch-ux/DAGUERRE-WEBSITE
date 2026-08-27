@@ -127,10 +127,29 @@ export const tokenPurpose = {
   newsletterConfirm: "newsletter:confirm",
   newsletterUnsubscribe: "newsletter:unsubscribe",
   quoteClaim: "quote:claim",
+  /**
+   * Invitation à signer un contrat.
+   *
+   * Le sujet compose l'identifiant du signataire et la version de son jeton :
+   * incrémenter cette version côté base révoque d'un coup tous les liens déjà
+   * envoyés, sans table de jetons à purger.
+   */
+  contractSign: "contract:sign",
+  /** Gestion d'un rendez-vous par la personne qui l'a réservé. */
+  bookingManage: "booking:manage",
 } as const;
 
 /** Durée de validité d'une confirmation d'inscription : sept jours. */
 export const CONFIRM_TTL_SECONDS = 7 * 24 * 60 * 60;
+
+/**
+ * Durée de validité d'une invitation à signer : trente jours.
+ *
+ * Un lien de signature est une capacité forte — il autorise à engager une
+ * partie. Contrairement au désabonnement, il n'a aucune raison d'être
+ * permanent : passé ce délai, l'administrateur relance.
+ */
+export const SIGN_TTL_SECONDS = 30 * 24 * 60 * 60;
 
 /** Durée de validité d'une invitation à réclamer un devis : trente jours. */
 export const CLAIM_TTL_SECONDS = 30 * 24 * 60 * 60;

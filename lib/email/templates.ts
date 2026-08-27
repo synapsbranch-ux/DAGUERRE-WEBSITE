@@ -114,6 +114,68 @@ export function invoiceIssuedEmail(
 }
 
 /* ------------------------------------------------------------------ */
+/* Contrats                                                            */
+/* ------------------------------------------------------------------ */
+
+/**
+ * Invitation à signer.
+ *
+ * Le lien **est** l'autorisation : il n'est envoyé qu'à l'adresse du signataire
+ * et n'est jamais repris ailleurs. Le document n'est pas joint — il se consulte
+ * derrière le lien, où la lecture est tracée pour la piste d'audit.
+ */
+export function contractToSignEmail(
+  locale: Locale,
+  params: { title: string; contractNumber: string; senderName: string; message: string; url: string },
+): RenderedEmail {
+  return build(
+    locale,
+    {
+      fr: `À signer : ${params.title}`,
+      en: `To sign: ${params.title}`,
+    },
+    { fr: "Un document attend votre signature", en: "A document awaits your signature" },
+    [
+      p(
+        `${params.senderName} vous invite à signer « ${params.title} » (${params.contractNumber}).`,
+        `${params.senderName} invites you to sign "${params.title}" (${params.contractNumber}).`,
+        locale,
+      ),
+      ...(params.message ? [{ kind: "quote" as const, text: params.message }] : []),
+      cta("Lire et signer", "Read and sign", params.url, locale),
+      p(
+        "Ce lien vous est personnel : ne le transmettez pas. Il expire dans trente jours.",
+        "This link is personal to you: do not forward it. It expires in thirty days.",
+        locale,
+      ),
+    ],
+  );
+}
+
+/** Le contrat est signé par toutes les parties — le document scellé est joint. */
+export function contractSignedEmail(
+  locale: Locale,
+  params: { title: string; contractNumber: string; url: string },
+): RenderedEmail {
+  return build(
+    locale,
+    {
+      fr: `Signé : ${params.title}`,
+      en: `Signed: ${params.title}`,
+    },
+    { fr: "Document signé par toutes les parties", en: "Document signed by all parties" },
+    [
+      p(
+        `« ${params.title} » (${params.contractNumber}) est signé par toutes les parties. La version définitive, accompagnée de sa piste d'audit, est jointe à ce message.`,
+        `"${params.title}" (${params.contractNumber}) has been signed by all parties. The final version, with its audit trail, is attached to this message.`,
+        locale,
+      ),
+      cta("Ouvrir mon espace", "Open my client area", params.url, locale),
+    ],
+  );
+}
+
+/* ------------------------------------------------------------------ */
 /* Infolettre                                                          */
 /* ------------------------------------------------------------------ */
 

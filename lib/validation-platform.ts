@@ -11,6 +11,8 @@ import {
   quotePriorities,
   quoteStatuses,
   paymentMethods,
+  contractSources,
+  signatureModes,
   resourceTypes,
   resourceVisibilities,
   subscriberSources,
@@ -399,6 +401,54 @@ export const paymentInputSchema = z.object({
   reference: text(120).optional().default(""),
   receivedAt: optionalDate,
   note: text(1000).optional().default(""),
+});
+
+/* ------------------------------------------------------------------ */
+/* Contrats et signature                                               */
+/* ------------------------------------------------------------------ */
+
+export const contractSignerInputSchema = z.object({
+  name: text(160).min(1, "Le nom du signataire est obligatoire."),
+  email,
+  role: text(80).optional().default(""),
+  /** 0 = sans ordre imposé ; sinon, rang d'apposition. */
+  order: z.coerce.number().int().min(0).max(20).optional().default(0),
+});
+
+export const contractInputSchema = z.object({
+  title: text(200).min(1, "Le titre est obligatoire."),
+  source: z.enum([...contractSources]).default("generated"),
+  body: text(120_000).optional().default(""),
+  sourceFileId: optionalObjectId,
+  clientId: text(64).optional().default(""),
+  quoteRequestId: optionalObjectId,
+  projectId: optionalObjectId,
+  message: text(2000).optional().default(""),
+  locale: localeField,
+  expiresAt: optionalDate,
+  signers: z.array(contractSignerInputSchema).min(1, "Ajoutez au moins un signataire.").max(10),
+});
+
+/**
+ * Apposition d'une signature.
+ *
+ * `consent` matérialise la case à cocher. Elle n'est pas décorative : une
+ * signature électronique simple tire sa valeur de l'intention manifestée, et
+ * cocher une case explicite est la trace de cette intention.
+ *
+ * Le tracé est plafonné ici ; sa validité réelle — en-tête, dimensions, flux
+ * compressé — est vérifiée par `checkSignaturePng`, parce qu'un PNG malformé
+ * peut faire boucler le décodeur.
+ */
+export const signatureInputSchema = z.object({
+  mode: z.enum([...signatureModes]).default("typed"),
+  /** Nom saisi, ou image PNG encodée en base64. */
+  value: z.string().max(200_000).min(1, "La signature est vide."),
+  consent: z.literal(true, { message: "Vous devez confirmer votre intention de signer." }),
+});
+
+export const declineInputSchema = z.object({
+  reason: text(1000).optional().default(""),
 });
 
 export { objectId as objectIdSchema, optionalObjectId as optionalObjectIdSchema, email as emailSchema };
