@@ -6,7 +6,7 @@ import { clientIp, readJson } from "@/lib/http";
 import { slidingWindow } from "@/lib/rate-limit";
 
 export async function POST(request: Request) {
-  if (!slidingWindow(`contact:${clientIp(request)}`, 5, 15 * 60 * 1000)) return NextResponse.json({ error: "Trop de messages. Réessayez plus tard." }, { status: 429 });
+  if (!(await slidingWindow(`contact:${clientIp(request)}`, 5, 15 * 60 * 1000))) return NextResponse.json({ error: "Trop de messages. Réessayez plus tard." }, { status: 429 });
   const json = await readJson(request);
   if ("error" in json) return json.error;
   const parsed = contactMessageSchema.safeParse(json.data);

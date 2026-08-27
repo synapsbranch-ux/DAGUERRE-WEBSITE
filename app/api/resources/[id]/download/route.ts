@@ -51,7 +51,7 @@ export async function GET(request: Request, { params }: { params: Promise<{ id: 
   const { id } = await params;
   if (!validObjectId(id)) return NextResponse.json({ error: "Introuvable" }, { status: 404 });
 
-  if (!slidingWindow(`download:${clientIp(request)}`, 60, 10 * 60 * 1000)) {
+  if (!(await slidingWindow(`download:${clientIp(request)}`, 60, 10 * 60 * 1000))) {
     return NextResponse.json({ error: "Trop de téléchargements. Réessayez plus tard." }, { status: 429 });
   }
 

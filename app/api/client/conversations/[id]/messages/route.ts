@@ -31,7 +31,7 @@ export async function POST(request: Request, { params }: Ctx) {
   if (isDenied(guard)) return guard.denied;
 
   const user = guard.session.user;
-  if (!slidingWindow(`message:${user.id}:${clientIp(request)}`, 30, 10 * 60 * 1000)) {
+  if (!(await slidingWindow(`message:${user.id}:${clientIp(request)}`, 30, 10 * 60 * 1000))) {
     return NextResponse.json({ error: "Trop de messages. Réessayez plus tard." }, { status: 429 });
   }
 

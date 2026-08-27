@@ -53,7 +53,7 @@ const MAX_ATTACHMENTS = 5;
  * prévient explicitement de ne pas y déposer de secrets.
  */
 export async function POST(request: Request) {
-  if (!slidingWindow(`quote:${clientIp(request)}`, 5, 30 * 60 * 1000)) {
+  if (!(await slidingWindow(`quote:${clientIp(request)}`, 5, 30 * 60 * 1000))) {
     return NextResponse.json({ error: "Trop de demandes. Réessayez plus tard." }, { status: 429 });
   }
 

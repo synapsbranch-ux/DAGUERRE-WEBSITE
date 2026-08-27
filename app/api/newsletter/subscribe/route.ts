@@ -24,7 +24,7 @@ import { newsletterSubscribeSchema } from "@/lib/validation-platform";
  * l'existence d'un abonné.
  */
 export async function POST(request: Request) {
-  if (!slidingWindow(`newsletter:${clientIp(request)}`, 5, 15 * 60 * 1000)) {
+  if (!(await slidingWindow(`newsletter:${clientIp(request)}`, 5, 15 * 60 * 1000))) {
     return NextResponse.json({ error: "Trop de tentatives. Réessayez plus tard." }, { status: 429 });
   }
 

@@ -1,0 +1,26 @@
+name: Tâches planifiées
+
+# Alternative à `vercel.json` pour un hébergement qui n'offre pas de
+# planificateur. Les deux ne doivent pas tourner en même temps : les tâches
+# sont idempotentes, donc un double appel ne casse rien, mais il ne sert à rien.
+on:
+  schedule:
+    # Toutes les cinq minutes. GitHub Actions n'est pas ponctuel à la minute :
+    # un retard de quelques minutes est normal et sans conséquence, les tâches
+    # rattrapent ce qui est dû.
+    - cron: "*/5 * * * *"
+  workflow_dispatch:
+
+jobs:
+  run:
+    runs-on: ubuntu-latest
+    steps:
+      - name: Déclencher /api/cron
+        # `--fail-with-body` : un 4xx ou 5xx fait échouer l'étape *et* affiche
+        # la réponse. Sans cela, un secret erroné produirait un workflow vert
+        # qui n'exécute plus rien depuis des semaines.
+        run: |
+          curl --fail-with-body --silent --show-error \
+            --max-time 300 \
+            --header "authorization: Bearer ${{ secrets.CRON_SECRET }}" \
+            "${{ secrets.SITE_URL }}/api/cron"

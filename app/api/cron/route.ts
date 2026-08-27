@@ -33,12 +33,29 @@ const MAX_CAMPAIGNS = 5;
  * rien. Deux exécutions concurrentes du planificateur ne peuvent donc pas faire
  * partir une campagne deux fois.
  *
- * `POST` uniquement, et jamais en `GET` : une tâche qui envoie des courriels ne
- * doit pas pouvoir se déclencher depuis une balise `<img>`.
+ * ## Accès, et pourquoi les deux méthodes ne l'accordent pas pareil
+ *
+ * `GET` n'accepte **que** le secret porté en en-tête. Les planificateurs
+ * d'hébergeurs — Vercel Cron notamment — appellent en `GET` ; c'est donc la
+ * méthode qu'il faut ouvrir. Mais une route `GET` qui accepterait aussi une
+ * session d'administration serait déclenchable depuis une simple balise
+ * `<img src="…/api/cron">` posée sur une page tierce, avec les droits de
+ * l'administrateur qui la consulte. Une balise ne peut pas poser d'en-tête :
+ * exiger le secret referme exactement cette porte.
+ *
+ * `POST` accepte les deux voies, dont la session d'administration, pour une
+ * relance manuelle depuis le tableau de bord.
  *
  * Fréquence conseillée : toutes les cinq minutes. Voir `vercel.json` et
  * `.github/workflows/cron.yml`.
  */
+export async function GET(request: Request) {
+  if (!hasCronSecret(request)) {
+    return NextResponse.json({ error: "Accès refusé." }, { status: 403 });
+  }
+  return run();
+}
+
 export async function POST(request: Request) {
   if (!hasCronSecret(request)) {
     const session = await readSession();
@@ -46,7 +63,10 @@ export async function POST(request: Request) {
       return NextResponse.json({ error: "Accès refusé." }, { status: 403 });
     }
   }
+  return run();
+}
 
+async function run() {
   await connectToDatabase();
 
   const resumed = await resumeSending();

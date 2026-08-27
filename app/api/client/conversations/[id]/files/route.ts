@@ -35,7 +35,7 @@ export async function POST(request: Request, { params }: Ctx) {
 
   // Un dépôt de fichiers est bien plus coûteux qu'un message : la limite est
   // plus basse, et distincte.
-  if (!slidingWindow(`upload:${user.id}:${clientIp(request)}`, 20, 10 * 60 * 1000)) {
+  if (!(await slidingWindow(`upload:${user.id}:${clientIp(request)}`, 20, 10 * 60 * 1000))) {
     return NextResponse.json({ error: "Trop de dépôts. Réessayez plus tard." }, { status: 429 });
   }
 

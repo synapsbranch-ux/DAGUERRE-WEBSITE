@@ -15,6 +15,8 @@ import { checkFile, downloadHeaders, safeFilename } from "@/lib/media/files";
 import { isAdminRole, normalizeRole } from "@/lib/platform/enums";
 import { roleFromClaims } from "@/lib/auth/roles";
 import { isHandledLogtoEvent, verifyLogtoSignature } from "@/lib/auth/webhook";
+import { hasCronSecret } from "@/lib/platform/cron";
+import { readSchedule } from "@/lib/platform/schedule";
 import { isHandledEvent, verifyWebhookSignature } from "@/lib/email/webhook";
 import { createHmac } from "node:crypto";
 
@@ -414,6 +416,72 @@ describe("signature des notifications Logto", () => {
   });
 });
 
+
+describe("secret des tâches planifiées", () => {
+  const SECRET = "secret-de-planificateur-suffisamment-long";
+
+  function request(header: string | null): Request {
+    return new Request("https://exemple.test/api/cron", {
+      headers: header ? { authorization: header } : {},
+    });
+  }
+
+  test("le bon secret passe", () => {
+    process.env.CRON_SECRET = SECRET;
+    assert.equal(hasCronSecret(request(`Bearer ${SECRET}`)), true);
+  });
+
+  test("un mauvais secret, un préfixe absent ou un en-tête vide sont refusés", () => {
+    process.env.CRON_SECRET = SECRET;
+    assert.equal(hasCronSecret(request(`Bearer ${SECRET}x`)), false);
+    assert.equal(hasCronSecret(request(SECRET)), false);
+    assert.equal(hasCronSecret(request(null)), false);
+    // Un préfixe correct ne suffit pas : la comparaison porte sur tout le reste.
+    assert.equal(hasCronSecret(request("Bearer secret-de-planificateur-suffisamment-lonG")), false);
+  });
+
+  test("sans secret configuré, la voie automatique est fermée", () => {
+    delete process.env.CRON_SECRET;
+    assert.equal(hasCronSecret(request(`Bearer ${SECRET}`)), false);
+    // Y compris pour une requête qui n'annonce rien : personne ne passe.
+    assert.equal(hasCronSecret(request(null)), false);
+  });
+});
+
+describe("date de départ programmée", () => {
+  const NOW = Date.parse("2026-08-27T12:00:00Z");
+
+  test("un champ vide ne programme rien", () => {
+    const read = readSchedule(undefined, NOW);
+    assert.ok(!("error" in read));
+    assert.equal(read.at, null);
+    assert.equal((readSchedule("", NOW) as { at: Date | null }).at, null);
+  });
+
+  test("une date future est retenue", () => {
+    const read = readSchedule("2026-08-27T18:00:00Z", NOW);
+    assert.ok(!("error" in read));
+    assert.equal(read.at?.toISOString(), "2026-08-27T18:00:00.000Z");
+  });
+
+  test("une date passée est refusée, jamais lancée immédiatement", () => {
+    const read = readSchedule("2026-08-20T09:00:00Z", NOW);
+    assert.ok("error" in read);
+    assert.equal(read.error.status, 400);
+  });
+
+  test("une tolérance couvre le trajet navigateur → serveur", () => {
+    // Programmé « à l'instant » et arrivé trois secondes plus tard.
+    const read = readSchedule(new Date(NOW - 3_000).toISOString(), NOW);
+    assert.ok(!("error" in read));
+  });
+
+  test("une date illisible est refusée", () => {
+    const read = readSchedule("demain matin", NOW);
+    assert.ok("error" in read);
+    assert.equal(read.error.status, 400);
+  });
+});
 
 describe("notifications du fournisseur d'envoi", () => {
   const secret = "whsec_" + Buffer.from("secret-webhook-de-test").toString("base64");
