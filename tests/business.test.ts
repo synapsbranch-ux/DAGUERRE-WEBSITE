@@ -38,6 +38,16 @@ import { formatBytes, formatDate } from "@/lib/platform/format";
 import { projectNumberPattern, quoteNumberPattern } from "@/lib/platform/numbers";
 import { locales } from "@/lib/i18n";
 import { href, publicPathname, routeKeys, routes, toInternalPath, toPublicPath } from "@/lib/routes";
+import {
+  addDays,
+  computeSlots,
+  daysBetween,
+  isKnownTimeZone,
+  overlaps,
+  zoneOffsetMinutes,
+  zonedParts,
+  zonedToUtc,
+} from "@/lib/platform/scheduling";
 
 process.env.APP_TOKEN_SECRET = "secret-de-test-suffisamment-long-pour-hmac";
 
@@ -425,5 +435,187 @@ describe("table des routes", () => {
     assert.equal(href("portalQuotes", "en", "abc"), "/en/client/quotes/abc");
     assert.equal(href("portalQuotes", "fr", "abc"), "/fr/espace-client/devis/abc");
     assert.equal(href("home", "fr"), "/fr");
+  });
+});
+
+/* ------------------------------------------------------------------ */
+/* Créneaux et fuseaux horaires                                        */
+/* ------------------------------------------------------------------ */
+
+describe("scheduling — fuseaux", () => {
+  const TZ = "America/Toronto";
+
+  test("lit le décalage effectif, pas un décalage supposé", () => {
+    // Même fuseau, deux décalages : c'est tout l'enjeu.
+    assert.equal(zoneOffsetMinutes(new Date("2026-01-15T13:00:00Z"), TZ), -300);
+    assert.equal(zoneOffsetMinutes(new Date("2026-07-15T13:00:00Z"), TZ), -240);
+  });
+
+  test("gère un fuseau à décalage non entier", () => {
+    assert.equal(zoneOffsetMinutes(new Date("2026-07-15T13:00:00Z"), "Asia/Kolkata"), 330);
+    assert.equal(zoneOffsetMinutes(new Date("2026-07-15T13:00:00Z"), "UTC"), 0);
+  });
+
+  test("convertit une heure locale en instant UTC, des deux côtés du changement d'heure", () => {
+    // 9 h locale reste 9 h locale toute l'année ; c'est l'instant UTC qui bouge.
+    assert.equal(
+      zonedToUtc({ year: 2026, month: 1, date: 15 }, 9 * 60, TZ).toISOString(),
+      "2026-01-15T14:00:00.000Z",
+    );
+    assert.equal(
+      zonedToUtc({ year: 2026, month: 7, date: 15 }, 9 * 60, TZ).toISOString(),
+      "2026-07-15T13:00:00.000Z",
+    );
+  });
+
+  test("relit les composantes civiles dans le fuseau", () => {
+    const parts = zonedParts(new Date("2026-07-15T13:00:00Z"), TZ);
+    assert.equal(parts.day, "2026-07-15");
+    assert.equal(parts.minutes, 9 * 60);
+    assert.equal(parts.weekday, 3);
+  });
+
+  test("refuse un fuseau inconnu au lieu de lever", () => {
+    assert.equal(isKnownTimeZone("America/Toronto"), true);
+    assert.equal(isKnownTimeZone("Mars/Olympus"), false);
+    assert.equal(isKnownTimeZone(""), false);
+  });
+
+  test("décale un jour civil sans dériver au changement d'heure", () => {
+    // Le 8 mars 2026 est un passage à l'heure d'été aux États-Unis et au Canada.
+    assert.equal(addDays("2026-03-07", 1), "2026-03-08");
+    assert.equal(addDays("2026-03-08", 1), "2026-03-09");
+    assert.equal(addDays("2026-12-31", 1), "2027-01-01");
+    assert.equal(daysBetween("2026-03-07", "2026-03-10"), 3);
+    assert.equal(daysBetween("2026-03-10", "2026-03-07"), -3);
+  });
+});
+
+describe("scheduling — créneaux", () => {
+  const TZ = "America/Toronto";
+  const base = {
+    timeZone: TZ,
+    // Mercredi 9 h – 12 h.
+    windows: [{ weekday: 3, startMinute: 9 * 60, endMinute: 12 * 60 }],
+    durationMinutes: 60,
+    bufferBefore: 0,
+    bufferAfter: 0,
+    minNoticeHours: 0,
+    maxDaysAhead: 60,
+    busy: [] as { start: Date; end: Date }[],
+    now: new Date("2026-07-01T00:00:00Z"),
+  };
+
+  test("découpe la plage selon le pas, sans déborder", () => {
+    const slots = computeSlots({ ...base, day: "2026-07-15", stepMinutes: 60 });
+    assert.deepEqual(
+      slots.map((slot) => slot.toISOString()),
+      ["2026-07-15T13:00:00.000Z", "2026-07-15T14:00:00.000Z", "2026-07-15T15:00:00.000Z"],
+    );
+  });
+
+  test("ne propose rien un jour sans plage", () => {
+    // Le 16 juillet 2026 est un jeudi ; la règle ne vise que le mercredi.
+    assert.deepEqual(computeSlots({ ...base, day: "2026-07-16" }), []);
+  });
+
+  test("écarte un créneau qui heurte un rendez-vous existant", () => {
+    const slots = computeSlots({
+      ...base,
+      day: "2026-07-15",
+      stepMinutes: 60,
+      busy: [{ start: new Date("2026-07-15T14:00:00Z"), end: new Date("2026-07-15T15:00:00Z") }],
+    });
+    assert.deepEqual(
+      slots.map((slot) => slot.toISOString()),
+      ["2026-07-15T13:00:00.000Z", "2026-07-15T15:00:00.000Z"],
+    );
+  });
+
+  test("tient compte des marges autour du créneau demandé", () => {
+    const slots = computeSlots({
+      ...base,
+      day: "2026-07-15",
+      stepMinutes: 60,
+      bufferBefore: 30,
+      bufferAfter: 30,
+      busy: [{ start: new Date("2026-07-15T14:00:00Z"), end: new Date("2026-07-15T15:00:00Z") }],
+    });
+    // Les marges mordent sur le rendez-vous existant de part et d'autre : il ne
+    // reste aucun créneau de la plage.
+    assert.deepEqual(slots, []);
+  });
+
+  test("respecte le délai de prévenance", () => {
+    const slots = computeSlots({
+      ...base,
+      day: "2026-07-15",
+      stepMinutes: 60,
+      now: new Date("2026-07-15T12:00:00Z"),
+      minNoticeHours: 2,
+    });
+    assert.deepEqual(
+      slots.map((slot) => slot.toISOString()),
+      ["2026-07-15T14:00:00.000Z", "2026-07-15T15:00:00.000Z"],
+    );
+  });
+
+  test("refuse un jour passé ou au-delà de l'horizon", () => {
+    assert.deepEqual(computeSlots({ ...base, day: "2026-06-24" }), []);
+    assert.deepEqual(computeSlots({ ...base, day: "2026-12-30", maxDaysAhead: 30 }), []);
+  });
+
+  test("garde les heures locales stables au passage à l'heure d'hiver", () => {
+    // Le 1er novembre 2026, l'Amérique du Nord recule d'une heure. La plage
+    // 9 h – 12 h locale doit toujours commencer à 9 h locale — soit 13 h UTC en
+    // heure avancée, 14 h UTC en heure normale.
+    const before = computeSlots({
+      ...base,
+      day: "2026-10-28",
+      stepMinutes: 180,
+      now: new Date("2026-10-01T00:00:00Z"),
+    });
+    const after = computeSlots({
+      ...base,
+      day: "2026-11-04",
+      stepMinutes: 180,
+      now: new Date("2026-10-01T00:00:00Z"),
+    });
+    assert.equal(before[0]?.toISOString(), "2026-10-28T13:00:00.000Z");
+    assert.equal(after[0]?.toISOString(), "2026-11-04T14:00:00.000Z");
+  });
+
+  test("traite les bornes comme semi-ouvertes", () => {
+    const touching = {
+      start: new Date("2026-07-15T14:00:00Z"),
+      end: new Date("2026-07-15T15:00:00Z"),
+    };
+    assert.equal(
+      overlaps(touching, {
+        start: new Date("2026-07-15T15:00:00Z"),
+        end: new Date("2026-07-15T16:00:00Z"),
+      }),
+      false,
+    );
+    assert.equal(
+      overlaps(touching, {
+        start: new Date("2026-07-15T14:59:00Z"),
+        end: new Date("2026-07-15T16:00:00Z"),
+      }),
+      true,
+    );
+  });
+
+  test("ne produit jamais deux fois le même créneau", () => {
+    const slots = computeSlots({
+      ...base,
+      day: "2026-07-15",
+      stepMinutes: 60,
+      windows: [
+        { weekday: 3, startMinute: 9 * 60, endMinute: 12 * 60 },
+        { weekday: 3, startMinute: 10 * 60, endMinute: 12 * 60 },
+      ],
+    });
+    assert.equal(new Set(slots.map((slot) => slot.getTime())).size, slots.length);
   });
 });

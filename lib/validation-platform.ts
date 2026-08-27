@@ -12,6 +12,8 @@ import {
   quoteStatuses,
   paymentMethods,
   contractSources,
+  eventKinds,
+  meetingLocations,
   signatureModes,
   resourceTypes,
   resourceVisibilities,
@@ -448,6 +450,119 @@ export const signatureInputSchema = z.object({
 });
 
 export const declineInputSchema = z.object({
+  reason: text(1000).optional().default(""),
+});
+
+/* ------------------------------------------------------------------ */
+/* Agenda et rendez-vous                                               */
+/* ------------------------------------------------------------------ */
+
+/**
+ * Fuseau horaire annoncé par un navigateur.
+ *
+ * Validé contre la base IANA du système plutôt que contre une liste écrite à la
+ * main : `Intl` lève sur un identifiant inconnu, et cette exception ne doit pas
+ * remonter jusqu'à une réponse d'API.
+ */
+const timeZoneField = z
+  .string()
+  .trim()
+  .max(64)
+  .refine(
+    (value) => {
+      if (!value) return true;
+      try {
+        new Intl.DateTimeFormat("en-US", { timeZone: value });
+        return true;
+      } catch {
+        return false;
+      }
+    },
+    { message: "Fuseau horaire inconnu." },
+  )
+  .optional()
+  .default("");
+
+const isoInstant = z
+  .string()
+  .trim()
+  .max(40)
+  .refine((value) => !Number.isNaN(Date.parse(value)), { message: "Date invalide." });
+
+export const calendarEventInputSchema = z.object({
+  title: text(200).min(1, "Le titre est obligatoire."),
+  description: text(4000).optional().default(""),
+  kind: z.enum([...eventKinds]).default("meeting"),
+  startAt: isoInstant,
+  endAt: isoInstant,
+  allDay: z.boolean().optional().default(false),
+  location: text(200).optional().default(""),
+  clientId: text(64).optional().default(""),
+  quoteRequestId: optionalObjectId,
+  projectId: optionalObjectId,
+});
+
+/**
+ * Plage de disponibilité hebdomadaire.
+ *
+ * Les minutes sont comptées depuis minuit **dans le fuseau de référence** :
+ * c'est ce qui rend « 9 h à 17 h » stable au changement d'heure.
+ */
+export const availabilityRuleInputSchema = z
+  .object({
+    weekday: z.coerce.number().int().min(0).max(6),
+    startMinute: z.coerce.number().int().min(0).max(1440),
+    endMinute: z.coerce.number().int().min(0).max(1440),
+    active: z.boolean().optional().default(true),
+  })
+  .refine((value) => value.endMinute > value.startMinute, {
+    message: "La fin doit suivre le début.",
+    path: ["endMinute"],
+  });
+
+export const meetingTypeInputSchema = z.object({
+  slug: slugSchema,
+  name: requiredLocalizedSchema,
+  description: localizedSchema.optional().default({ fr: "", en: "" }),
+  durationMinutes: z.coerce.number().int().min(5).max(480),
+  bufferBefore: z.coerce.number().int().min(0).max(240).optional().default(0),
+  bufferAfter: z.coerce.number().int().min(0).max(240).optional().default(0),
+  minNoticeHours: z.coerce.number().int().min(0).max(720).optional().default(12),
+  maxDaysAhead: z.coerce.number().int().min(1).max(365).optional().default(60),
+  location: z.enum([...meetingLocations]).default("video"),
+  locationDetail: text(300).optional().default(""),
+  active: z.boolean().optional().default(true),
+  position: z.coerce.number().int().min(0).max(999).optional().default(0),
+});
+
+export const schedulingSettingsSchema = z.object({
+  timezone: timeZoneField,
+  notifyEmail: z.union([email, z.literal("")]).optional().default(""),
+  organizerName: text(120).optional().default(""),
+  organizerEmail: z.union([email, z.literal("")]).optional().default(""),
+  slotStepMinutes: z.coerce.number().int().min(5).max(120).optional().default(15),
+});
+
+/**
+ * Réservation publique.
+ *
+ * Ni `endAt` ni `status` n'y figurent : la fin se déduit de la durée du type de
+ * rencontre, et le statut est décidé par le serveur. Les accepter permettrait de
+ * réserver deux heures sur un créneau de trente minutes.
+ */
+export const bookingInputSchema = z.object({
+  meetingTypeSlug: slugSchema,
+  startAt: isoInstant,
+  name: text(160).min(1, "Le nom est obligatoire."),
+  email,
+  phone: text(40).optional().default(""),
+  note: text(2000).optional().default(""),
+  timezone: timeZoneField,
+  locale: localeField,
+  website: honeypot,
+});
+
+export const bookingCancelSchema = z.object({
   reason: text(1000).optional().default(""),
 });
 

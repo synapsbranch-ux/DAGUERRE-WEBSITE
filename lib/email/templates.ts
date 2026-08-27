@@ -520,3 +520,116 @@ export function resourceAvailableEmail(
     ],
   );
 }
+
+/* ------------------------------------------------------------------ */
+/* Rendez-vous                                                         */
+/* ------------------------------------------------------------------ */
+
+/**
+ * Confirmation d'un rendez-vous — l'invitation d'agenda voyage en pièce jointe.
+ *
+ * L'heure est **déjà formatée** par l'appelant, dans le fuseau annoncé par le
+ * réservant. La reformater ici obligerait le gabarit à connaître les fuseaux, et
+ * un courriel qui annonce une heure dans le mauvais fuseau vaut moins que pas de
+ * courriel du tout.
+ */
+export function bookingConfirmedEmail(
+  locale: Locale,
+  params: {
+    typeName: string;
+    when: string;
+    timezone: string;
+    durationMinutes: number;
+    location: string;
+    manageUrl: string;
+  },
+): RenderedEmail {
+  return build(
+    locale,
+    { fr: `Rendez-vous confirmé : ${params.when}`, en: `Meeting confirmed: ${params.when}` },
+    { fr: "Votre rendez-vous est confirmé", en: "Your meeting is confirmed" },
+    [
+      {
+        kind: "definition",
+        rows: [
+          { term: locale === "fr" ? "Rencontre" : "Meeting", value: params.typeName },
+          { term: locale === "fr" ? "Date" : "Date", value: `${params.when} (${params.timezone})` },
+          {
+            term: locale === "fr" ? "Durée" : "Duration",
+            value: `${params.durationMinutes} min`,
+          },
+          { term: locale === "fr" ? "Lieu" : "Location", value: params.location },
+        ],
+      },
+      p(
+        "L'invitation jointe s'ajoute à votre agenda en un clic.",
+        "The attached invitation adds the meeting to your calendar in one click.",
+        locale,
+      ),
+      cta("Gérer ou annuler", "Manage or cancel", params.manageUrl, locale),
+    ],
+  );
+}
+
+/** Annulation d'un rendez-vous, quelle qu'en soit l'origine. */
+export function bookingCancelledEmail(
+  locale: Locale,
+  params: { typeName: string; when: string; reason: string; bookingUrl: string },
+): RenderedEmail {
+  return build(
+    locale,
+    { fr: `Rendez-vous annulé : ${params.when}`, en: `Meeting cancelled: ${params.when}` },
+    { fr: "Votre rendez-vous est annulé", en: "Your meeting is cancelled" },
+    [
+      p(
+        `Le rendez-vous « ${params.typeName} » du ${params.when} est annulé.`,
+        `The "${params.typeName}" meeting on ${params.when} has been cancelled.`,
+        locale,
+      ),
+      ...(params.reason ? [{ kind: "quote" as const, text: params.reason }] : []),
+      cta("Choisir un autre créneau", "Pick another time", params.bookingUrl, locale),
+    ],
+  );
+}
+
+/**
+ * Avis interne d'une nouvelle réservation.
+ *
+ * Il part vers l'adresse de l'entreprise, pas vers le réservant : l'heure y est
+ * donc exprimée dans le **fuseau de référence**, celui dans lequel l'agenda est
+ * tenu, et non dans celui du visiteur.
+ */
+export function bookingNoticeEmail(
+  locale: Locale,
+  params: {
+    typeName: string;
+    when: string;
+    name: string;
+    email: string;
+    phone: string;
+    note: string;
+    adminUrl: string;
+  },
+): RenderedEmail {
+  return build(
+    locale,
+    { fr: `Nouveau rendez-vous : ${params.when}`, en: `New meeting: ${params.when}` },
+    { fr: "Un rendez-vous vient d'être réservé", en: "A meeting has just been booked" },
+    [
+      {
+        kind: "definition",
+        rows: [
+          { term: locale === "fr" ? "Rencontre" : "Meeting", value: params.typeName },
+          { term: locale === "fr" ? "Date" : "Date", value: params.when },
+          { term: locale === "fr" ? "Personne" : "Person", value: params.name },
+          { term: locale === "fr" ? "Courriel" : "Email", value: params.email },
+          ...(params.phone
+            ? [{ term: locale === "fr" ? "Téléphone" : "Phone", value: params.phone }]
+            : []),
+        ],
+      },
+      ...(params.note ? [{ kind: "quote" as const, text: params.note }] : []),
+      cta("Ouvrir l'agenda", "Open the calendar", params.adminUrl, locale),
+    ],
+  );
+}

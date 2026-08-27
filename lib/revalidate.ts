@@ -39,6 +39,10 @@ const listPaths: Record<string, string[]> = {
   datakle: ["/datakle"],
   engagement: ["/engagement"],
   cv: ["/cv"],
+  /* Les types de rencontre alimentent la page de réservation, qui est
+     prérendue : sans cette entrée, activer un type ne le ferait apparaître
+     qu'au prochain déploiement. */
+  meetingTypes: ["/rendez-vous"],
 };
 
 /** Préfixe de la page de détail, quand la ressource en possède une. */

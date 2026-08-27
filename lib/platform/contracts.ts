@@ -232,6 +232,24 @@ export function isContractExpired(contract: Doc): boolean {
 }
 
 /**
+ * Ferme les contrats dont la date limite est passée.
+ *
+ * Idempotent : la sélection ne retient que ce qui est encore ouvert, si bien
+ * qu'une seconde exécution ne trouve plus rien. Sans ce travail, `expiresAt` ne
+ * serait honoré qu'au moment où quelqu'un tente de signer — un contrat périmé
+ * resterait affiché « en attente de signature » indéfiniment dans le tableau de
+ * bord, et sa date limite ne vaudrait rien.
+ */
+export async function markExpiredContracts(now = new Date()): Promise<number> {
+  const result = await ContractModel.updateMany(
+    { status: { $in: ["sent", "partially_signed"] }, expiresAt: { $ne: null, $lt: now } },
+    { $set: { status: "expired", completedAt: now } },
+  );
+
+  return result.modifiedCount ?? 0;
+}
+
+/**
  * Signataire suivant à qui la main revient.
  *
  * Quand un ordre est imposé (`order` non nul), un signataire ne peut ouvrir le

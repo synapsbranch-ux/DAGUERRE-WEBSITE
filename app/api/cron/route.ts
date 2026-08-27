@@ -6,6 +6,8 @@ import { NewsletterCampaignModel } from "@/lib/db/models/platform";
 import { isEmailConfigured } from "@/lib/email/provider";
 import { hasCronSecret } from "@/lib/platform/cron";
 import { isAdminRole } from "@/lib/platform/enums";
+import { markOverdueInvoices } from "@/lib/platform/billing";
+import { markExpiredContracts } from "@/lib/platform/contracts";
 import { expireOverdueProposals } from "@/lib/platform/expiry";
 import { dispatchBatch, dispatchCampaign, finalizeCampaign, launchCampaign } from "@/lib/platform/newsletter";
 
@@ -27,6 +29,10 @@ const MAX_CAMPAIGNS = 5;
  *    sans que rien ne l'honore.
  * 3. **Péremption des propositions.** `validUntil` n'était qu'affiché : une
  *    offre restait indéfiniment acceptable.
+ * 4. **Factures en retard.** Sans ce passage, `dueAt` ne serait qu'une date
+ *    imprimée : le statut « en retard » ne s'établirait jamais de lui-même.
+ * 5. **Contrats périmés.** Même raison : une date limite qui n'est honorée
+ *    qu'au moment où quelqu'un tente de signer ne ferme rien.
  *
  * Chaque travail est **idempotent** : les sélections portent sur des statuts que
  * les mises à jour font changer, si bien qu'une seconde exécution ne trouve plus
@@ -72,8 +78,17 @@ async function run() {
   const resumed = await resumeSending();
   const started = await startScheduled();
   const expired = await expireOverdueProposals();
+  const overdueInvoices = await markOverdueInvoices();
+  const expiredContracts = await markExpiredContracts();
 
-  return NextResponse.json({ ok: true, resumed, started, expired });
+  return NextResponse.json({
+    ok: true,
+    resumed,
+    started,
+    expired,
+    overdueInvoices,
+    expiredContracts,
+  });
 }
 
 /** Reprend les campagnes laissées en cours par une tâche de fond interrompue. */

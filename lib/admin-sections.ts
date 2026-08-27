@@ -25,7 +25,14 @@ export type AdminSection =
    */
   | { path: string; label: string; group: AdminGroup; kind: "custom" };
 
-export type AdminGroup = "Contenus" | "Clients" | "Marketing" | "Pages" | "Réglages" | "Système";
+export type AdminGroup =
+  | "Contenus"
+  | "Clients"
+  | "Rendez-vous"
+  | "Marketing"
+  | "Pages"
+  | "Réglages"
+  | "Système";
 
 export const adminSections: AdminSection[] = [
   { path: "articles", label: "Articles", group: "Contenus", kind: "collection", resource: "posts" },
@@ -43,6 +50,10 @@ export const adminSections: AdminSection[] = [
   { path: "factures", label: "Factures", group: "Clients", kind: "custom" },
   { path: "contrats", label: "Contrats", group: "Clients", kind: "custom" },
   { path: "conversations", label: "Conversations", group: "Clients", kind: "custom" },
+
+  { path: "agenda", label: "Agenda", group: "Rendez-vous", kind: "custom" },
+  { path: "rendez-vous", label: "Réservations", group: "Rendez-vous", kind: "custom" },
+  { path: "disponibilites", label: "Disponibilités", group: "Rendez-vous", kind: "custom" },
 
   { path: "newsletter/abonnes", label: "Abonnés", group: "Marketing", kind: "custom" },
   { path: "newsletter/campagnes", label: "Campagnes", group: "Marketing", kind: "custom" },
@@ -64,6 +75,7 @@ export const adminSections: AdminSection[] = [
 export const adminGroups: AdminGroup[] = [
   "Contenus",
   "Clients",
+  "Rendez-vous",
   "Marketing",
   "Pages",
   "Réglages",

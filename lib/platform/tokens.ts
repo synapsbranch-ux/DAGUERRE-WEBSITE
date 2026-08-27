@@ -137,6 +137,14 @@ export const tokenPurpose = {
   contractSign: "contract:sign",
   /** Gestion d'un rendez-vous par la personne qui l'a réservé. */
   bookingManage: "booking:manage",
+  /**
+   * Abonnement à l'agenda au format iCalendar.
+   *
+   * Permanent, comme un lien de désabonnement : une URL d'abonnement se colle
+   * une fois dans un agenda et doit continuer à répondre des mois plus tard.
+   * Le sujet est fixe — le jeton n'ouvre que ce flux, en lecture seule.
+   */
+  calendarFeed: "calendar:feed",
 } as const;
 
 /** Durée de validité d'une confirmation d'inscription : sept jours. */
@@ -150,6 +158,16 @@ export const CONFIRM_TTL_SECONDS = 7 * 24 * 60 * 60;
  * permanent : passé ce délai, l'administrateur relance.
  */
 export const SIGN_TTL_SECONDS = 30 * 24 * 60 * 60;
+
+/**
+ * Durée de validité d'un lien de gestion de rendez-vous : cent-vingt jours.
+ *
+ * Il doit survivre au rendez-vous lui-même — l'horizon de réservation va
+ * jusqu'à un an, mais un lien d'annulation qui expire avant la rencontre qu'il
+ * concerne ne sert à rien. La borne reste finie : le lien permet d'annuler, et
+ * une capacité d'écriture n'a pas à être éternelle.
+ */
+export const BOOKING_TTL_SECONDS = 120 * 24 * 60 * 60;
 
 /** Durée de validité d'une invitation à réclamer un devis : trente jours. */
 export const CLAIM_TTL_SECONDS = 30 * 24 * 60 * 60;

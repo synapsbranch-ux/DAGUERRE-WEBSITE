@@ -49,6 +49,31 @@ const CRITICAL: { collection: string; key: string; why: string }[] = [
     why: "deux propositions ne peuvent pas porter le même numéro de version",
   },
   { collection: "appusers", key: "logtoId_1", why: "un compte Logto, une ligne de miroir" },
+  {
+    collection: "invoices",
+    key: "invoiceNumber_1",
+    why: "un numéro de facture n'est jamais réattribué",
+  },
+  {
+    collection: "contracts",
+    key: "contractNumber_1",
+    why: "un numéro de contrat n'est jamais réattribué",
+  },
+  {
+    collection: "contractsigners",
+    key: "contractId_1_email_1",
+    why: "une adresse ne reçoit qu'un lien de signature par contrat",
+  },
+  {
+    collection: "bookings",
+    key: "submissionKey_1",
+    why: "anti-double-réservation sur un double envoi du formulaire",
+  },
+  {
+    collection: "meetingtypes",
+    key: "slug_1",
+    why: "un raccourci de réservation ne désigne qu'un type de rencontre",
+  },
 ];
 
 async function main() {

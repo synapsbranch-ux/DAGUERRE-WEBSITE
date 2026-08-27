@@ -916,3 +916,27 @@ bookingSchema.index(
   { unique: true, partialFilterExpression: { submissionKey: { $type: "string", $gt: "" } } },
 );
 export const BookingModel = define("Booking", bookingSchema);
+
+/**
+ * Réglages de l'agenda.
+ *
+ * `timezone` est le fuseau **de référence de l'entreprise** : c'est en lui que
+ * s'expriment les plages de disponibilité, et lui seul rend la règle « le mardi
+ * de 9 h à 17 h » stable au changement d'heure. Le fuseau du réservant, lui, est
+ * porté par la réservation et ne sert qu'à l'affichage.
+ */
+const schedulingSettingsSchema = new Schema<PlatformDoc>(
+  {
+    key: { type: String, default: "scheduling", unique: true },
+    timezone: { type: String, trim: true, default: "America/Toronto" },
+    /** Adresse prévenue de chaque réservation ; vide = celle de facturation. */
+    notifyEmail: { type: String, trim: true, lowercase: true, default: "" },
+    /** Nom affiché comme organisateur dans l'invitation d'agenda. */
+    organizerName: { type: String, trim: true, default: "" },
+    organizerEmail: { type: String, trim: true, lowercase: true, default: "" },
+    /** Pas de la grille de créneaux proposés, en minutes. */
+    slotStepMinutes: { type: Number, default: 15, min: 5, max: 120 },
+  },
+  schemaOptions,
+);
+export const SchedulingSettingsModel = define("SchedulingSettings", schedulingSettingsSchema);
