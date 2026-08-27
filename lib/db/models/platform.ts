@@ -862,8 +862,8 @@ export const AvailabilityRuleModel = define("AvailabilityRule", availabilityRule
 const meetingTypeSchema = new Schema<PlatformDoc>(
   {
     slug: { type: String, required: true, unique: true, trim: true, lowercase: true },
-    name: localizedString,
-    description: localizedString,
+    name: localizedString(true),
+    description: localizedString(),
     durationMinutes: { type: Number, required: true, min: 5, max: 480 },
     /** Marges avant et après, pour ne pas enchaîner sans respirer. */
     bufferBefore: { type: Number, default: 0, min: 0, max: 240 },
