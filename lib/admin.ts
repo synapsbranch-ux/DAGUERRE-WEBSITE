@@ -19,7 +19,7 @@ export type AdminSession = PlatformSession;
  * seule règle décide qui est administrateur.
  */
 
-/** Lecture de la session Better Auth depuis les en-têtes de la requête courante. */
+/** Lecture de la session Logto depuis le cookie de la requête courante. */
 export async function readSession(): Promise<AdminSession | null> {
   return readPlatformSession();
 }

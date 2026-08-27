@@ -32,10 +32,10 @@ type Row = {
 /**
  * Comptes clients.
  *
- * Les comptes appartiennent à Better Auth ; cette page les lit sans jamais
- * toucher aux identifiants. **Aucun mot de passe n'est lisible ni
- * réinitialisable d'ici** : un mot de passe haché n'est pas récupérable, et
- * c'est exactement ce qu'on attend de lui.
+ * Les comptes appartiennent à Logto ; cette page lit leur miroir local sans
+ * jamais toucher aux identifiants. **Aucun mot de passe n'est lisible ni
+ * réinitialisable d'ici** : ils ne sont pas dans cette base, et c'est
+ * exactement ce qu'on attend d'eux.
  */
 export default async function AdminClientsPage({ searchParams }: PageProps<"/admin/clients">) {
   await requireAdmin();
