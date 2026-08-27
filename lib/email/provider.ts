@@ -24,6 +24,21 @@
 
 export type EmailAddress = string;
 
+/**
+ * Pièce jointe.
+ *
+ * Le contenu voyage en mémoire, ce qui borne l'usage : une facture ou un
+ * contrat signé pèsent quelques dizaines de kilooctets. Les fournisseurs
+ * plafonnent de toute façon le message complet aux alentours de quarante
+ * mégaoctets — au-delà, c'est un lien de téléchargement qu'il faut envoyer, pas
+ * un fichier.
+ */
+export type EmailAttachment = {
+  filename: string;
+  content: Buffer;
+  contentType?: string;
+};
+
 export type OutgoingEmail = {
   to: EmailAddress;
   subject: string;
@@ -32,6 +47,7 @@ export type OutgoingEmail = {
   /** En-têtes additionnels — `List-Unsubscribe` pour le marketing. */
   headers?: Record<string, string>;
   replyTo?: string;
+  attachments?: EmailAttachment[];
 };
 
 export type DeliveryResult =
@@ -123,7 +139,10 @@ export async function deliver(email: OutgoingEmail, from: string): Promise<Deliv
   if (transport === "console") {
     // Le corps n'est pas journalisé : un courriel transactionnel contient le
     // nom du client, parfois un lien à usage unique.
-    console.info(`[email] (console) → ${email.to} — ${email.subject}`);
+    const attached = email.attachments?.length
+      ? ` (+${email.attachments.length} pièce(s) jointe(s))`
+      : "";
+    console.info(`[email] (console) → ${email.to} — ${email.subject}${attached}`);
     return { ok: true, id: `console-${Date.now()}`, transport };
   }
 
@@ -142,6 +161,15 @@ export async function deliver(email: OutgoingEmail, from: string): Promise<Deliv
         text: email.text,
         ...(email.replyTo ? { reply_to: email.replyTo } : {}),
         ...(email.headers ? { headers: email.headers } : {}),
+        ...(email.attachments?.length
+          ? {
+              attachments: email.attachments.map((attachment) => ({
+                filename: attachment.filename,
+                content: attachment.content.toString("base64"),
+                ...(attachment.contentType ? { content_type: attachment.contentType } : {}),
+              })),
+            }
+          : {}),
       }),
     });
 

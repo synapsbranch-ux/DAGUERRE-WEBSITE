@@ -10,6 +10,7 @@ import {
   fileVisibilities,
   quotePriorities,
   quoteStatuses,
+  paymentMethods,
   resourceTypes,
   resourceVisibilities,
   subscriberSources,
@@ -336,6 +337,68 @@ export const fileMetadataSchema = z.object({
   projectId: optionalObjectId,
   conversationId: optionalObjectId,
   label: text(200).optional().default(""),
+});
+
+/* ------------------------------------------------------------------ */
+/* Facturation                                                         */
+/* ------------------------------------------------------------------ */
+
+/**
+ * Taux de taxe en parties par million.
+ *
+ * Saisi en pourcentage dans l'interface, converti avant d'arriver ici. Le
+ * plafond à 1 000 000 interdit un taux supérieur à 100 % : au-delà, c'est une
+ * faute de frappe, pas une intention.
+ */
+const ratePpm = z.coerce.number().int().min(0).max(1_000_000);
+
+export const billingTaxSchema = z.object({
+  label: text(60).min(1, "Le libellé de la taxe est obligatoire."),
+  ratePpm,
+  registration: text(60).optional().default(""),
+});
+
+export const billingSettingsSchema = z.object({
+  legalName: text(160).optional().default(""),
+  address: text(400).optional().default(""),
+  email: z.union([email, z.literal("")]).optional().default(""),
+  phone: text(40).optional().default(""),
+  defaultCurrency: z.enum([...currencies]).default("CAD"),
+  paymentTermsDays: z.coerce.number().int().min(0).max(365).default(30),
+  taxes: z.array(billingTaxSchema).max(6).optional().default([]),
+  defaultTerms: text(4000).optional().default(""),
+  defaultNotes: text(4000).optional().default(""),
+});
+
+export const invoiceInputSchema = z.object({
+  clientId: text(64).optional().default(""),
+  billTo: z
+    .object({
+      name: text(160).optional().default(""),
+      email: z.union([email, z.literal("")]).optional().default(""),
+      company: text(160).optional().default(""),
+      address: text(400).optional().default(""),
+    })
+    .optional()
+    .default({ name: "", email: "", company: "", address: "" }),
+  quoteRequestId: optionalObjectId,
+  projectId: optionalObjectId,
+  currency: z.enum([...currencies]).default("CAD"),
+  locale: localeField,
+  items: z.array(proposalItemInputSchema).min(1, "Ajoutez au moins une ligne.").max(60),
+  discount: z.union([z.string(), z.number()]).optional().default("0"),
+  taxes: z.array(billingTaxSchema).max(6).optional().default([]),
+  dueAt: optionalDate,
+  notes: text(4000).optional().default(""),
+  terms: text(8000).optional().default(""),
+});
+
+export const paymentInputSchema = z.object({
+  amount: z.union([z.string(), z.number()]),
+  method: z.enum([...paymentMethods]).default("transfer"),
+  reference: text(120).optional().default(""),
+  receivedAt: optionalDate,
+  note: text(1000).optional().default(""),
 });
 
 export { objectId as objectIdSchema, optionalObjectId as optionalObjectIdSchema, email as emailSchema };

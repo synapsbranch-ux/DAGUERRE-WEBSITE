@@ -593,6 +593,57 @@ adminAuditLogSchema.index({ createdAt: -1 });
 export const AdminAuditLogModel = define("AdminAuditLog", adminAuditLogSchema);
 
 /* ------------------------------------------------------------------ */
+/* Réglages de facturation                                             */
+/* ------------------------------------------------------------------ */
+
+/**
+ * Identité fiscale de l'émetteur et valeurs par défaut des factures.
+ *
+ * Séparée des réglages du site : une raison sociale, une adresse de
+ * facturation et des numéros d'inscription aux taxes ne se modifient ni au même
+ * rythme ni par les mêmes mains qu'un texte d'accueil. Aucun taux n'est codé en
+ * dur — la TPS, la TVQ ou toute autre taxe se saisissent ici.
+ *
+ * Ces valeurs ne servent qu'à **préremplir** une nouvelle facture : une fois
+ * émise, la facture porte sa propre copie. Changer le taux l'an prochain ne
+ * réécrit rien de ce qui est parti.
+ */
+const billingTaxSchema = new Schema<PlatformDoc>(
+  {
+    label: { type: String, required: true, trim: true },
+    /**
+     * Taux en parties par million : 9,975 % vaut 99 750.
+     *
+     * Les points de base ne suffisent pas — 9,975 % y vaudrait 997,5, un
+     * nombre à virgule, ce qui ruinerait l'argument même de l'arithmétique
+     * entière. La TVQ impose cette précision au millième de pour cent.
+     */
+    ratePpm: { type: Number, required: true, min: 0, max: 1_000_000 },
+    registration: { type: String, trim: true, default: "" },
+    position: { type: Number, default: 0 },
+  },
+  { _id: false },
+);
+
+const billingSettingsSchema = new Schema<PlatformDoc>(
+  {
+    key: { type: String, default: "billing", unique: true },
+    legalName: { type: String, trim: true, default: "" },
+    address: { type: String, default: "" },
+    email: { type: String, trim: true, lowercase: true, default: "" },
+    phone: { type: String, trim: true, default: "" },
+    defaultCurrency: { type: String, enum: currencies, default: "CAD" },
+    /** Délai de paiement appliqué par défaut à une nouvelle facture. */
+    paymentTermsDays: { type: Number, default: 30, min: 0, max: 365 },
+    taxes: { type: [billingTaxSchema], default: [] },
+    defaultTerms: { type: String, default: "" },
+    defaultNotes: { type: String, default: "" },
+  },
+  schemaOptions,
+);
+export const BillingSettingsModel = define("BillingSettings", billingSettingsSchema);
+
+/* ------------------------------------------------------------------ */
 /* Factures                                                            */
 /* ------------------------------------------------------------------ */
 
@@ -607,8 +658,8 @@ export const AdminAuditLogModel = define("AdminAuditLog", adminAuditLogSchema);
 const invoiceTaxSchema = new Schema<PlatformDoc>(
   {
     label: { type: String, required: true, trim: true },
-    /** Taux en points de base : 5 % vaut 500. Entier, donc exact. */
-    rateBasisPoints: { type: Number, required: true, min: 0, max: 100_000 },
+    /** Taux en parties par million : 5 % vaut 50 000. Entier, donc exact. */
+    ratePpm: { type: Number, required: true, min: 0, max: 1_000_000 },
     /** Montant calculé en unités mineures, figé à l'émission. */
     amount: money,
     registration: { type: String, trim: true, default: "" },

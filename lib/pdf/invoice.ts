@@ -39,7 +39,7 @@ export type InvoiceDocument = {
   items: { name: string; description: string; quantity: number; unitPrice: number; amount: number }[];
   subtotal: number;
   discount: number;
-  taxes: { label: string; rateBasisPoints: number; amount: number; registration: string }[];
+  taxes: { label: string; ratePpm: number; amount: number; registration: string }[];
   total: number;
   amountPaid: number;
   notes: string;
@@ -99,9 +99,9 @@ function formatDate(value: Date | null, locale: Locale): string {
   return new Intl.DateTimeFormat(locale === "fr" ? "fr-CA" : "en-CA", { dateStyle: "long" }).format(value);
 }
 
-/** Taux affiché à côté du libellé : 500 points de base → « 5 % ». */
-function formatRate(basisPoints: number, locale: Locale): string {
-  const value = basisPoints / 100;
+/** Taux affiché à côté du libellé : 50 000 ppm → « 5 % ». */
+function formatRate(ratePpm: number, locale: Locale): string {
+  const value = ratePpm / 10_000;
   const formatted = new Intl.NumberFormat(locale === "fr" ? "fr-CA" : "en-CA", {
     maximumFractionDigits: 3,
   }).format(value);
@@ -222,8 +222,8 @@ export async function renderInvoicePdf(invoice: InvoiceDocument, issuer: Issuer)
   if (invoice.discount > 0) totalLine(builder, t.discount, `- ${money(invoice.discount)}`);
   for (const tax of invoice.taxes) {
     const label = tax.registration
-      ? `${tax.label} (${formatRate(tax.rateBasisPoints, locale)}) · ${tax.registration}`
-      : `${tax.label} (${formatRate(tax.rateBasisPoints, locale)})`;
+      ? `${tax.label} (${formatRate(tax.ratePpm, locale)}) · ${tax.registration}`
+      : `${tax.label} (${formatRate(tax.ratePpm, locale)})`;
     totalLine(builder, label, money(tax.amount));
   }
 

@@ -4,10 +4,13 @@ import type { InvoiceStatus } from "@/lib/platform/enums";
 /**
  * Arithmétique d'une facture.
  *
- * Tout est en **unités mineures entières** et les taux en **points de base**
- * (5 % vaut 500). Un taux en nombre à virgule flottante — 0.05 — introduit une
- * erreur dès la première multiplication ; en entiers, `montant * 500 / 10000`
- * arrondi une seule fois donne toujours le même résultat.
+ * Tout est en **unités mineures entières** et les taux en **parties par
+ * million** : 5 % vaut 50 000, et 9,975 % vaut 99 750.
+ *
+ * Pourquoi pas les points de base, l'unité habituelle ? Parce que la TVQ
+ * québécoise est à 9,975 % : en points de base elle vaudrait 997,5, un nombre à
+ * virgule — exactement ce que cette représentation cherche à éviter. Au
+ * millionième, tous les taux réels tombent juste.
  *
  * Ces fonctions font foi côté serveur. Le navigateur affiche un total pour
  * confirmer la saisie, mais une requête forgée qui annoncerait `total: 0` sur
@@ -18,7 +21,8 @@ export type InvoiceItemInput = { quantity: number; unitPrice: number };
 
 export type TaxInput = {
   label: string;
-  rateBasisPoints: number;
+  /** Taux en parties par million : 9,975 % vaut 99 750. */
+  ratePpm: number;
   registration?: string;
 };
 
@@ -35,8 +39,8 @@ export type InvoiceTotals = {
   total: number;
 };
 
-/** Un point de base vaut un centième de pour cent. */
-const BASIS_POINTS = 10_000;
+/** Une partie par million vaut un dix-millième de pour cent. */
+const PPM = 1_000_000;
 
 /**
  * Applique un taux à une base.
@@ -44,9 +48,9 @@ const BASIS_POINTS = 10_000;
  * `Math.round` sur le résultat entier, une seule fois : arrondir ligne par
  * ligne puis sommer produirait un total qui ne correspond pas au taux affiché.
  */
-export function applyRate(base: number, rateBasisPoints: number): number {
-  if (base <= 0 || rateBasisPoints <= 0) return 0;
-  return Math.round((base * rateBasisPoints) / BASIS_POINTS);
+export function applyRate(base: number, ratePpm: number): number {
+  if (base <= 0 || ratePpm <= 0) return 0;
+  return Math.round((base * ratePpm) / PPM);
 }
 
 /**
@@ -69,7 +73,7 @@ export function computeInvoice(
 
   const computed: ComputedTax[] = taxes.map((tax) => ({
     ...tax,
-    amount: applyRate(taxableBase, tax.rateBasisPoints),
+    amount: applyRate(taxableBase, tax.ratePpm),
   }));
 
   const taxTotal = computed.reduce((sum, tax) => sum + tax.amount, 0);

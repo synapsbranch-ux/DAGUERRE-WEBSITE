@@ -68,6 +68,52 @@ export function accountWelcomeEmail(
 }
 
 /* ------------------------------------------------------------------ */
+/* Facturation                                                         */
+/* ------------------------------------------------------------------ */
+
+/**
+ * Transmission d'une facture.
+ *
+ * Le montant et l'échéance figurent dans le courriel, mais **le PDF fait foi**
+ * et voyage en pièce jointe : un client doit pouvoir archiver sa facture sans
+ * dépendre d'un lien qui vivra moins longtemps que son obligation comptable.
+ */
+export function invoiceIssuedEmail(
+  locale: Locale,
+  params: { invoiceNumber: string; total: string; dueDate: string; url: string },
+): RenderedEmail {
+  return build(
+    locale,
+    {
+      fr: `Facture ${params.invoiceNumber}`,
+      en: `Invoice ${params.invoiceNumber}`,
+    },
+    { fr: "Votre facture", en: "Your invoice" },
+    [
+      p(
+        `Voici la facture ${params.invoiceNumber}, d'un montant de ${params.total}.`,
+        `Here is invoice ${params.invoiceNumber}, for ${params.total}.`,
+        locale,
+      ),
+      ...(params.dueDate
+        ? [
+            {
+              kind: "definition" as const,
+              rows: [{ term: locale === "fr" ? "Échéance" : "Due date", value: params.dueDate }],
+            },
+          ]
+        : []),
+      p(
+        "Le document complet est joint à ce message et reste consultable depuis votre espace client.",
+        "The full document is attached to this message and remains available in your client area.",
+        locale,
+      ),
+      cta("Ouvrir mon espace", "Open my client area", params.url, locale),
+    ],
+  );
+}
+
+/* ------------------------------------------------------------------ */
 /* Infolettre                                                          */
 /* ------------------------------------------------------------------ */
 

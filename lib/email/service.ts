@@ -5,6 +5,7 @@ import {
   replyToAddress,
   transactionalFrom,
   type DeliveryResult,
+  type EmailAttachment,
 } from "@/lib/email/provider";
 import type { RenderedEmail } from "@/lib/email/templates";
 import type { Locale } from "@/lib/i18n";
@@ -28,9 +29,20 @@ import { href, type RouteKey } from "@/lib/routes";
 export type SendOutcome = DeliveryResult;
 
 /** Courriel de service, envoyé depuis l'adresse transactionnelle. */
-export function sendTransactionalEmail(to: string, email: RenderedEmail): Promise<SendOutcome> {
+export function sendTransactionalEmail(
+  to: string,
+  email: RenderedEmail,
+  attachments?: EmailAttachment[],
+): Promise<SendOutcome> {
   return deliver(
-    { to, subject: email.subject, html: email.html, text: email.text, replyTo: replyToAddress() },
+    {
+      to,
+      subject: email.subject,
+      html: email.html,
+      text: email.text,
+      replyTo: replyToAddress(),
+      ...(attachments?.length ? { attachments } : {}),
+    },
     transactionalFrom(),
   );
 }

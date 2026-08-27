@@ -53,7 +53,12 @@ export type RouteKey =
   | "portalMessages"
   | "portalProjects"
   | "portalNotifications"
-  | "portalProfile";
+  | "portalProfile"
+  | "portalInvoices"
+  | "portalContracts"
+  | "contractSign"
+  | "booking"
+  | "bookingManage";
 
 export type RouteDefinition = {
   /** Segment(s) par locale, sans barre oblique initiale. `""` pour l'accueil. */
@@ -200,6 +205,42 @@ export const routes: Record<RouteKey, RouteDefinition> = {
     label: { fr: "Créer un compte", en: "Create an account" },
     inSitemap: false,
     priority: 0.3,
+    changeFrequency: "yearly",
+  },
+  portalInvoices: {
+    path: { fr: "espace-client/factures", en: "client/invoices" },
+    label: { fr: "Factures", en: "Invoices" },
+    inSitemap: false,
+    priority: 0.3,
+    changeFrequency: "daily",
+  },
+  portalContracts: {
+    path: { fr: "espace-client/contrats", en: "client/contracts" },
+    label: { fr: "Contrats", en: "Contracts" },
+    inSitemap: false,
+    priority: 0.3,
+    changeFrequency: "daily",
+  },
+  /** Page de signature, atteinte par un lien signé — hors de tout compte. */
+  contractSign: {
+    path: { fr: "signature", en: "sign" },
+    label: { fr: "Signer un document", en: "Sign a document" },
+    inSitemap: false,
+    priority: 0.1,
+    changeFrequency: "yearly",
+  },
+  booking: {
+    path: { fr: "rendez-vous", en: "booking" },
+    label: { fr: "Prendre rendez-vous", en: "Book a meeting" },
+    inSitemap: true,
+    priority: 0.7,
+    changeFrequency: "monthly",
+  },
+  bookingManage: {
+    path: { fr: "rendez-vous/gerer", en: "booking/manage" },
+    label: { fr: "Gérer mon rendez-vous", en: "Manage my meeting" },
+    inSitemap: false,
+    priority: 0.1,
     changeFrequency: "yearly",
   },
   quote: {
